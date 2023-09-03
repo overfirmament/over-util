@@ -1,0 +1,21 @@
+{
+    "name": "overfirmament/over-util",
+    "description": "A PHP Util Package",
+    "require": {
+        "php": "^8.1",
+        "monolog/monolog": "^3.4",
+        "laravel/framework": "^10.21",
+        "guzzlehttp/guzzle": "^7.8"
+    },
+    "autoload": {
+        "psr-4": {
+            "Overfirmament\\OverUtils\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "overfirmament",
+            "email": "lxz413@gmail.com"
+        }
+    ]
+}
