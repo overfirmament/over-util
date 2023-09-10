@@ -43,8 +43,8 @@ class RedisUtil
     }
 
 
-    public function action(string $action, $param)
+    public function __call($method, $args)
     {
-        return $this->redis->$action($param);
+        return $this->redis->$method($args);
     }
 }
