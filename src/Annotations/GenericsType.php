@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Annotations;
+namespace Overfirmament\OverUtils\Annotations;
 
 
 #[\Attribute(\Attribute::TARGET_PROPERTY)]
