@@ -23,9 +23,10 @@ class HttpRequestBean
         return $this->name;
     }
 
-    public function setName(mixed $name): void
+    public function setName(mixed $name): HttpRequestBean
     {
         $this->name = $name;
+        return $this;
     }
 
     public function getMethod(): string
@@ -33,20 +34,21 @@ class HttpRequestBean
         return $this->method;
     }
 
-    public function setMethod(string $method): void
+    public function setMethod(string $method): HttpRequestBean
     {
         $this->method = $method;
+        return $this;
     }
-
 
     public function getUrl(): string
     {
         return $this->url;
     }
 
-    public function setUrl(string $url): void
+    public function setUrl(string $url): HttpRequestBean
     {
         $this->url = $url;
+        return $this;
     }
 
     public function getHeaders(): array
@@ -54,9 +56,10 @@ class HttpRequestBean
         return $this->headers;
     }
 
-    public function setHeaders(array $headers): void
+    public function setHeaders(array $headers): HttpRequestBean
     {
         $this->headers = $headers;
+        return $this;
     }
 
     public function getQuery(): array
@@ -64,9 +67,10 @@ class HttpRequestBean
         return $this->query;
     }
 
-    public function setQuery(array $query): void
+    public function setQuery(array $query): HttpRequestBean
     {
         $this->query = $query;
+        return $this;
     }
 
     public function getJson(): array
@@ -74,9 +78,10 @@ class HttpRequestBean
         return $this->json;
     }
 
-    public function setJson(array $json): void
+    public function setJson(array $json): HttpRequestBean
     {
         $this->json = $json;
+        return $this;
     }
 
     public function getBody(): array
@@ -84,8 +89,9 @@ class HttpRequestBean
         return $this->body;
     }
 
-    public function setBody(array $body): void
+    public function setBody(array $body): HttpRequestBean
     {
         $this->body = $body;
+        return $this;
     }
 }
