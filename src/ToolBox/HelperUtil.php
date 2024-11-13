@@ -112,28 +112,17 @@ class HelperUtil
      */
     public static function generateRequestId(): array|string
     {
-        $uuid = \Str::uuid()->toString();
-        return str_replace("-", "", $uuid);
+        return self::uniqeStr();
     }
 
 
     /**
-     * 格式化数据库查询结果（pluck）返回给管理后台下拉框的筛选项
-     *
-     * @param  array|Collection  $options
-     *
-     * @return array
+     * @return array|string|string[]
      */
-    public static function formatSelectOptions(array|Collection $options): array
+    public static function uniqeStr(): array|string
     {
-        $result = [];
-        foreach ($options as $key => $value) {
-            $result[] = [
-                'id'   => $key,
-                'text' => $value,
-            ];
-        }
-        return $result;
+        $uuid = \Str::uuid()->toString();
+        return str_replace("-", "", $uuid);
     }
 
 

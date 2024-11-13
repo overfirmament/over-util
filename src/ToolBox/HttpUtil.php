@@ -4,7 +4,11 @@ namespace Overfirmament\OverUtils\ToolBox;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
+use GuzzleHttp\Promise\Utils;
+use Illuminate\Http\Client\Pool;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Overfirmament\OverUtils\Pojo\Bean\HttpRequestBean;
 
 
 class HttpUtil
@@ -24,6 +28,7 @@ class HttpUtil
     private function __construct()
     {
         $this->client = new Client();
+        $this->dotRepost = array_merge($this->dotRepost, config("http.dot_repost"));
     }
 
     public static function getInstance(): HttpUtil
@@ -82,6 +87,85 @@ class HttpUtil
         $this->log($url, $options, $result, $response->getStatusCode(), $method);
 
         return $result;
+    }
+
+
+    /**
+     * 并发请求 get
+     *
+     * @param  array<HttpRequestBean>  $request
+     *
+     * @return array
+     */
+    public function getAsync(array $request): array
+    {
+        $promises = [];
+        for ($i = 0; $i < count($request); $i++) {
+            $bean = $request[$i];
+
+            $promises[$bean->getName() ?: $i] = $this->client->getAsync(
+                $bean->getUrl(),
+                [
+                    "headers" => $bean->getHeaders(),
+                    "query" => $bean->getQuery()
+                ]
+            );
+        }
+
+        return Utils::settle($promises)->wait();
+    }
+
+
+    /**
+     * @param  array<HttpRequestBean>  $request
+     *
+     * @return array
+     */
+    public function postAsync(array $request): array
+    {
+        $promises = [];
+        for ($i = 0; $i < count($request); $i++) {
+            $bean = $request[$i];
+
+            $promises[$bean->getName() ?: $i] = $this->client->postAsync(
+                $bean->getUrl(),
+                [
+                    "headers" => $bean->getHeaders(),
+                    "json" => $bean->getJson()
+                ]
+            );
+        }
+
+        return Utils::settle($promises)->wait();
+    }
+
+
+    /**
+     * @param  array<HttpRequestBean>  $request
+     *
+     * @return array
+     */
+    public function async(array $request): array
+    {
+        $promises = [];
+        for ($i = 0; $i < count($request); $i++) {
+            $bean = $request[$i];
+
+            $options = $bean->getMethod() == "GET" ? [
+                "headers" => $bean->getHeaders(),
+                "query" => $bean->getQuery()
+            ] : [
+                "headers" => $bean->getHeaders(),
+                "json" => $bean->getJson()
+            ];
+            $promises[$bean->getName() ?: $i] = $this->client->requestAsync(
+                $bean->getMethod(),
+                $bean->getUrl(),
+                $options
+            );
+        }
+
+        return Utils::settle($promises)->wait();
     }
 
 

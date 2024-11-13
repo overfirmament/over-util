@@ -1,8 +1,8 @@
 <?php
 
-namespace Overfirmament\OverUtils\Vo;
+namespace Overfirmament\OverUtils\Pojo;
 
-interface VOInterface
+interface POJOInterface
 {
     /**
      * @return array

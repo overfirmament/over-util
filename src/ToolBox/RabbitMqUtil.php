@@ -2,14 +2,18 @@
 
 namespace Overfirmament\OverUtils\ToolBox;
 
+use App\Utils\HelperUtil;
 use Exception;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Channel\AbstractChannel;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Message\AMQPMessage;
+use Throwable;
 
 class RabbitMqUtil
 {
+    protected static $instance = [];
+
     protected AMQPMessage $msg;
     protected AMQPStreamConnection $connection;
     protected string $queueName;
@@ -22,20 +26,39 @@ class RabbitMqUtil
 
     protected string $uuid;
 
+    protected string $routingKey = "";
+
+
+    /**
+     * @param  string  $configName
+     *
+     * @return static
+     * @throws Exception
+     */
+    public static function getInstance(string $configName = "default"): static
+    {
+//        if (!isset(static::$instance[$configName])) {
+//            static::$instance[$configName] = new static($configName);
+//        }
+
+        return new static($configName);
+    }
+
+
     /**
      * @param  string  $configName
      *
      * @throws Exception
      */
-    public function __construct(string $configName)
+    protected function __construct(string $configName)
     {
         $this->config = config("rabbitmq.connections.{$configName}");
+        if (empty($this->config)){
+            throw new Exception("rabbitmq配置{$configName}不存在");
+        }
+
         $this->uuid = str_replace("-", "", \Str::uuid()->toString());
         \Log::channel("rabbit_mq")->info("mqTool初始化 {$this->uuid}，使用配置rabbitmq.connections.{$configName}", $this->config);
-
-        if (empty($this->config)){
-            $this->config = config("rabbitmq.connections.default");
-        }
 
         $host = $this->config["host"] ?? "127.0.0.1";
         $port = $this->config["port"] ?? 5672;
@@ -46,6 +69,20 @@ class RabbitMqUtil
         $this->channel = $this->connection->channel();
     }
 
+
+    /**
+     * @param  string  $routingKey
+     *
+     * @return RabbitMqUtil
+     */
+    public function setRoutingKey(string $routingKey): static
+    {
+        $this->routingKey = $routingKey;
+
+        return $this;
+    }
+    
+    
     /**
      * @throws Exception
      */
@@ -105,7 +142,7 @@ class RabbitMqUtil
             throw new Exception("绑定失败：交换机名和队列名缺失");
         }
 
-        $this->channel->queue_bind($this->queueName, $this->exchangeName, $this->config["routing_key"]);
+        $this->channel->queue_bind($this->queueName, $this->exchangeName, $this->routingKey ?:$this->config["routing_key"]);
         \Log::channel("rabbit_mq")->info("bind构建完成 {$this->uuid}");
 
         return $this;
@@ -171,25 +208,26 @@ class RabbitMqUtil
      * 发布
      *
      * @return void
+     * @throws Throwable
      */
     public function publish(): void
     {
         $this->channel->confirm_select();
         $this->channel->set_ack_handler(
             function (AMQPMessage $message) {
-                \Log::channel("rabbit_mq")->info("msg.ack {$this->uuid}".$message->body);
+                \Log::channel("rabbit_mq")->info("msg.ack {$this->uuid} ".$message->body);
             }
         );
         $this->channel->set_nack_handler(
             function (AMQPMessage $message) {
-                \Log::channel("rabbit_mq")->info("msg.nack {$this->uuid}".$message->body);
+                \Log::channel("rabbit_mq")->info("msg.nack {$this->uuid} ".$message->body);
             }
         );
 
         $publish = $this->config["publish"];
         $this->channel->basic_publish($this->msg,
             $this->exchangeName,
-            $this->config["routing_key"],
+            $this->routingKey ?: $this->config["routing_key"],
             $publish["mandatory"] ?? false,
             $publish["immediate"] ?? false,
             $publish["ticket"] ?? null
@@ -198,6 +236,8 @@ class RabbitMqUtil
         if($this->isAck){
             $this->channel->wait_for_pending_acks();
         }
+
+        $this->close();
     }
 
 
@@ -210,12 +250,34 @@ class RabbitMqUtil
 
 
     /**
-     * @throws Exception
+     * @return void
+     * @throws Throwable
      */
-    public function __destruct()
+    public function close(): void
     {
-        $this->channel->close();
-        $this->connection->close();
+        try {
+            $this->channel->close();
+            $this->connection->close();
+            \Log::channel("rabbit_mq")->info("mqTool关闭 {$this->uuid}");
+        } catch (Throwable $e) {
+            \Log::channel("rabbit_mq")->error("mqTool关闭失败 {$this->uuid}", [
+                "error" => $e->getMessage(),
+                "line" => $e->getLine(),
+                "trace" => $e->getTrace(),
+                "config" => HelperUtil::autoJsonEncode($this->config)
+            ]);
+            throw new $e;
+        }
     }
+
+
+
+//    /**
+//     * @throws Exception|\Throwable
+//     */
+//    public function __destruct()
+//    {
+//
+//    }
 
 }

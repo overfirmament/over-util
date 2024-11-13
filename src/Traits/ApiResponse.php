@@ -7,7 +7,7 @@ use Illuminate\Contracts\Routing\ResponseFactory;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\Response;
 use Overfirmament\OverUtils\ToolBox\HelperUtil;
-use Overfirmament\OverUtils\Vo\VOInterface;
+use Overfirmament\OverUtils\Pojo\POJOInterface;
 use Symfony\Component\HttpFoundation\Response as FoundationResponse;
 
 trait ApiResponse
@@ -101,14 +101,14 @@ trait ApiResponse
     }
 
     /**
-     * @param  array|VOInterface  $data
+     * @param  array|POJOInterface  $data
      * @param  string  $status
      *
      * @return \Illuminate\Contracts\Foundation\Application|ResponseFactory|Application|Response
      */
-    public function success(array|VOInterface $data, string $status = "success"): Application|Response|\Illuminate\Contracts\Foundation\Application|ResponseFactory
+    public function success(array|POJOInterface $data, string $status = "success"): Application|Response|\Illuminate\Contracts\Foundation\Application|ResponseFactory
     {
-        if ($data instanceof VOInterface) {
+        if ($data instanceof POJOInterface) {
             $data = $data->toArray();
         }
         return $this->status($status, compact('data'));
