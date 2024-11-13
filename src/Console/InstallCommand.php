@@ -21,7 +21,8 @@ class InstallCommand extends Command
 
     public function writeLogFormatChannel(): void
     {
-        $loggingChannelsConfig = config("logging.channels");
+        $config = config("logging");
+        $loggingChannelsConfig = $config["channels"] ?? [];
 
         if (filled($loggingChannelsConfig) && is_array($loggingChannelsConfig)) {
             if (!Arr::exists($loggingChannelsConfig, "http_in")) {
@@ -50,7 +51,7 @@ class InstallCommand extends Command
 
             // 使用正则表达式替换旧的 'channels' 配置（如果有的话）
             $pattern = "/'channels' => \[(.*?)\],/s";
-            $replacement = "'channels' => " . var_export($loggingChannelsConfig['channels'], true) . ',';
+            $replacement = "'channels' => " . var_export($loggingChannelsConfig, true) . ',';
             $newLoggingConfig = preg_replace($pattern, $replacement, $loggingConfig);
 
             // 保存修改后的配置文件
