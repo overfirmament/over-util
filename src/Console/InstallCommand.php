@@ -15,7 +15,7 @@ class InstallCommand extends Command
 
     public function handle()
     {
-
+        $this->writeLogFormatChannel();
     }
 
 
