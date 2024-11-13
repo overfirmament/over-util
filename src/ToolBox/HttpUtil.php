@@ -28,7 +28,7 @@ class HttpUtil
     private function __construct()
     {
         $this->client = new Client();
-        $this->dotRepost = array_merge($this->dotRepost, config("http.dot_repost"));
+        $this->dotRepost = array_merge($this->dotRepost, config("http.dot_repost", []));
     }
 
     public static function getInstance(): HttpUtil
