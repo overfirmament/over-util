@@ -16,7 +16,7 @@ class HttpUtil
     protected static $instance;
     private Client $client;
 
-    protected array $dotRepost = [
+    protected array $dontRepost = [
 
     ];
 
@@ -28,7 +28,7 @@ class HttpUtil
     private function __construct()
     {
         $this->client = new Client();
-        $this->dotRepost = array_merge($this->dotRepost, config("http.dot_repost", []));
+        $this->dontRepost = array_merge($this->dotRepost, config("http.dont_report", []));
     }
 
     public static function getInstance(): HttpUtil
