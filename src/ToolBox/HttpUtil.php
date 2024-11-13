@@ -28,7 +28,7 @@ class HttpUtil
     private function __construct()
     {
         $this->client = new Client();
-        $this->dontRepost = array_merge($this->dotRepost, config("http.dont_report", []));
+        $this->dontRepost = array_merge($this->dontRepost, config("http.dont_report", []));
     }
 
     public static function getInstance(): HttpUtil
