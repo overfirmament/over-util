@@ -25,11 +25,11 @@ class LogHttpOutResponse
      */
     public function handle(ResponseReceived $event)
     {
-        $patterns = array_merge($this->dontReport, config("httputil.log.dont_report", []));
+        $patterns = array_merge($this->dontReport, config("over_util.http_util.log.dont_report", []));
         $url      = Str::after($event->request->url(), "//");
 
         if (!collect($patterns)->contains(fn($pattern) => Str::is($pattern, $url))) {
-            Log::build(config("httputil.log.channels.http_out"))->info('HTTP Response Received', [
+            Log::channel("http_out")->info('HTTP Response Received', [
                 'request_id'    => $event->request->header("X-REQUEST-ID") ?? "",
                 'url'           => $event->request->url(),
                 'status'        => $event->response->status(),
