@@ -53,7 +53,7 @@ class InstallCommand extends Command
             $pattern = "/'channels' => \[(.*?)\],/s";
             $replacement = "'channels' => " . var_export($loggingChannelsConfig, true) . ',';
             $newLoggingConfig = preg_replace($pattern, $replacement, $loggingConfig);
-
+dd($newLoggingConfig);
             // 保存修改后的配置文件
             file_put_contents($loggingConfigPath, $newLoggingConfig);
 

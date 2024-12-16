@@ -3,16 +3,27 @@
 namespace Overfirmament\OverUtils;
 
 use Illuminate\Support\ServiceProvider;
-use Overfirmament\OverUtils\Console\InstallCommand;
 
 class OverUtilServiceProvider extends ServiceProvider
 {
-    protected array $commands = [
-        InstallCommand::class
-    ];
-
-    public function register(): void
+    public function boot()
     {
-        $this->commands($this->commands);
+        $this->registerPublishing();
+    }
+
+    public function register()
+    {
+        $this->mergeConfigFrom(
+            __DIR__.'/../config/logging.php', 'channels'
+        );
+    }
+
+    protected function registerPublishing()
+    {
+        if ($this->app->runningInConsole()) {
+            $this->publishes([
+                __DIR__.'/../config/over_util.php' => config_path('over_util.php'),
+            ], 'overutil-config');
+        }
     }
 }

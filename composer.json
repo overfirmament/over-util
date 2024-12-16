@@ -21,7 +21,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Overfirmament\\OverUtils\\OverUtilServiceProvider"
+                "Overfirmament\\OverUtils\\OverUtilsServiceProvider"
             ]
         }
     },

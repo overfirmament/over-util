@@ -5,9 +5,11 @@ namespace Overfirmament\OverUtils\ToolBox;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Promise\Utils;
+use GuzzleHttp\Psr7\Response;
 use Illuminate\Http\Client\Pool;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Overfirmament\OverUtils\Pojo\Bean\HttpRequestBean;
 
 
@@ -16,7 +18,7 @@ class HttpUtil
     protected static $instance;
     private Client $client;
 
-    protected array $dontRepost = [
+    protected array $dontReport = [
 
     ];
 
@@ -28,7 +30,7 @@ class HttpUtil
     private function __construct()
     {
         $this->client = new Client();
-        $this->dontRepost = array_merge($this->dontRepost, config("http.dont_report", []));
+        $this->dontReport = array_merge($this->dontReport, config("httputil.log.dont_report", []));
     }
 
     public static function getInstance(): HttpUtil
@@ -94,25 +96,45 @@ class HttpUtil
      * 并发请求 get
      *
      * @param  array<HttpRequestBean>  $request
+     * @param  bool  $ajax
      *
      * @return array
      */
-    public function getAsync(array $request): array
+    public function getAsync(array $request, bool $ajax = true): array
     {
-        $promises = [];
-        for ($i = 0; $i < count($request); $i++) {
-            $bean = $request[$i];
-
-            $promises[$bean->getName() ?: $i] = $this->client->getAsync(
+        $promises = array_map(function ($bean) {
+            return $this->client->getAsync(
                 $bean->getUrl(),
                 [
                     "headers" => $bean->getHeaders(),
-                    "query" => $bean->getQuery()
+                    "query"   => $bean->getQuery()
                 ]
             );
-        }
+        }, $request);
 
-        return Utils::settle($promises)->wait();
+        if ($ajax) {
+            $responses = [];
+            foreach(Utils::settle($promises)->wait() as $key => $value) {
+                $state = $value["state"];
+                /**
+                 * @var Response $response
+                 */
+                $response = $value["value"];
+                $jsonRes = $state == "fulfilled" ? HelperUtil::autoJsonDecode($response->getBody()->getContents()) : null;
+                $responses[$key] = $jsonRes;
+
+                $this->log($request[$key]->getUrl(), [
+                    "headers" => $request[$key]->getHeaders(),
+                    "query" => $request[$key]->getQuery(),
+                    "json" => $request[$key]->getJson(),
+                    "body" => $request[$key]->getBody(),
+                ], $jsonRes, $response->getStatusCode());
+            }
+
+            return $responses;
+        } else {
+            return Utils::settle($promises)->wait();
+        }
     }
 
 
@@ -171,7 +193,8 @@ class HttpUtil
 
     private function log($url, $options, ?array $response, int $httpCode, $method = "GET"): void
     {
-        if (in_array($url, $this->dotRepost)) {
+        $full = Str::after($url, "//");
+        if (collect($this->dontReport)->contains(fn($pattern) => Str::is($pattern, $full))) {
             return ;
         }
 
