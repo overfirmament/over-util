@@ -14,7 +14,7 @@ class OverUtilServiceProvider extends ServiceProvider
     public function register()
     {
         $this->mergeConfigFrom(
-            __DIR__.'/../config/logging.php', 'channels'
+            __DIR__.'/../config/logging.php', 'logging'
         );
     }
 
