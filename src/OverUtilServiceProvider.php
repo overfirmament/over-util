@@ -6,6 +6,10 @@ use Illuminate\Support\ServiceProvider;
 
 class OverUtilServiceProvider extends ServiceProvider
 {
+    protected array $commands = [
+        Console\InstallCommand::class,
+    ];
+
     public function boot()
     {
         $this->registerPublishing();
@@ -13,9 +17,7 @@ class OverUtilServiceProvider extends ServiceProvider
 
     public function register()
     {
-        $this->mergeConfigFrom(
-            __DIR__.'/../config/logging.php', 'logging'
-        );
+        $this->commands($this->commands);
     }
 
     protected function registerPublishing()

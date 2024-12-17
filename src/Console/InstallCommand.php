@@ -5,6 +5,7 @@ namespace Overfirmament\OverUtils\Console;
 use Illuminate\Console\Command;
 use Illuminate\Support\Arr;
 use Overfirmament\OverUtils\Logger\LogFormatter;
+use Symfony\Component\VarExporter\VarExporter;
 
 class InstallCommand extends Command
 {
@@ -21,41 +22,28 @@ class InstallCommand extends Command
 
     public function writeLogFormatChannel(): void
     {
-        $config = config("logging");
+        $httpLogchannels = require config_path("logging_channel.php");
+
+        $configPath = config_path("logging.php");
+        $config = require $configPath;
         $loggingChannelsConfig = $config["channels"] ?? [];
 
-        if (filled($loggingChannelsConfig) && is_array($loggingChannelsConfig)) {
+        if (is_array($loggingChannelsConfig)) {
             if (!Arr::exists($loggingChannelsConfig, "http_in")) {
-                $loggingChannelsConfig["http_in"] = [
-                    'driver' => 'daily',
-                    'path' => storage_path('logs/http/in_info.log'),
-                    'level' => env('LOG_LEVEL', 'debug'),
-                    'days' => 14,
-                    'formatter' => LogFormatter::class
-                ];
+                $loggingChannelsConfig["http_in"] = $httpLogchannels["http_in"];
             }
 
             if (!Arr::exists($loggingChannelsConfig, "http_out")) {
-                $loggingChannelsConfig["http_out"] = [
-                    'driver' => 'daily',
-                    'path' => storage_path('logs/http/out_info.log'),
-                    'level' => env('LOG_LEVEL', 'debug'),
-                    'days' => 14,
-                    'formatter' => LogFormatter::class
-                ];
+                $loggingChannelsConfig["http_out"] = $httpLogchannels["http_out"];
             }
 
             // 将配置保存回 config/logging.php
-            $loggingConfigPath = config_path('logging.php');
-            $loggingConfig = file_get_contents($loggingConfigPath);
+            $config["channels"] = $loggingChannelsConfig;
 
             // 使用正则表达式替换旧的 'channels' 配置（如果有的话）
-            $pattern = "/'channels' => \[(.*?)\],/s";
-            $replacement = "'channels' => " . var_export($loggingChannelsConfig, true) . ',';
-            $newLoggingConfig = preg_replace($pattern, $replacement, $loggingConfig);
-dd($newLoggingConfig);
+            $configContent = "<?php\nreturn " . VarExporter::export($config) . ";\n";
             // 保存修改后的配置文件
-            file_put_contents($loggingConfigPath, $newLoggingConfig);
+            file_put_contents($configPath, $configContent);
 
             $this->info("Log format channel has been added to config/logging.php");
         } else {
