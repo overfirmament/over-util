@@ -27,6 +27,8 @@ class LogFormatter extends JsonFormatter
 
             if (is_array($value)) {
                 $data[$key] = $this->autoConvert2Utf8($value);
+            } elseif (is_object($value)) {
+                $data[$key] = $this->autoConvert2Utf8((array)$value);
             } else {
                 if (!is_bool($value) && mb_detect_encoding($value, ["CP936", "UTF-8"]) == "CP936") {
                     $data[$key] = HelperUtil::convertGbk($value);
