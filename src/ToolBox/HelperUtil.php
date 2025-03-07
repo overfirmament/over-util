@@ -3,6 +3,8 @@
 namespace Overfirmament\OverUtils\ToolBox;
 
 use App\Exceptions\BizException;
+use Illuminate\Contracts\Support\Arrayable;
+use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Support\Collection;
 use function App\Utils\config;
 
@@ -321,5 +323,46 @@ class HelperUtil
         }
 
         return trim($domain, "/") . "/" . trim($path, "/");
+    }
+
+
+    /**
+     * 把给定的值转化为数组.
+     *
+     * @param $value
+     * @param  bool  $filter
+     * @return array
+     */
+    public static function array($value, bool $filter = true): array
+    {
+        if ($value === null || $value === '' || $value === []) {
+            return [];
+        }
+
+        if ($value instanceof \Closure) {
+            $value = $value();
+        }
+
+        if (is_array($value)) {
+        } elseif ($value instanceof Jsonable) {
+            $value = json_decode($value->toJson(), true);
+        } elseif ($value instanceof Arrayable) {
+            $value = $value->toArray();
+        } elseif (is_string($value)) {
+            $array = null;
+
+            try {
+                $array = json_decode($value, true);
+            } catch (\Throwable $e) {
+            }
+
+            $value = is_array($array) ? $array : explode(',', $value);
+        } else {
+            $value = (array) $value;
+        }
+
+        return $filter ? array_filter($value, function ($v) {
+            return $v !== '' && $v !== null;
+        }) : $value;
     }
 }

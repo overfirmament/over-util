@@ -13,14 +13,17 @@ use Illuminate\Support\HigherOrderTapProxy;
  */
 class ContextUtil extends Fluent
 {
+    /**
+     * @var static|null
+     */
     protected static ?ContextUtil $context = null;
 
     /**
-     * @return self
+     * @return static
      */
-    public static function getInstance(): ContextUtil
+    public static function getInstance(): static
     {
-        return static::$context ??= new self();
+        return static::$context ??= new static();
     }
 
 
@@ -77,7 +80,7 @@ class ContextUtil extends Fluent
      */
     public function getArray($key, $default = null): array
     {
-        return Helper::array($this->get($key, $default), false);
+        return HelperUtil::array($this->get($key, $default), false);
     }
 
 
