@@ -2,7 +2,7 @@
     "name": "overfirmament/over-util",
     "description": "A Laravel Util Package",
     "require": {
-        "php": "^8.1",
+        "php": "^8.2",
         "monolog/monolog": "^3.4",
         "laravel/framework": "~10.0|~11.0|~12.0",
         "guzzlehttp/guzzle": "^7.8"

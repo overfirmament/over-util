@@ -5,6 +5,7 @@ namespace Overfirmament\OverUtils\Traits;
 
 use Illuminate\Contracts\Routing\ResponseFactory;
 use Illuminate\Foundation\Application;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Overfirmament\OverUtils\ToolBox\HelperUtil;
 use Overfirmament\OverUtils\Pojo\POJOInterface;
@@ -56,12 +57,12 @@ trait ApiResponse
      * @param $data
      * @param  array  $headers
      *
-     * @return \Illuminate\Contracts\Foundation\Application|ResponseFactory|Application|Response
+     * @return JsonResponse
      */
-    public function respond($data, array $headers = ['Content-Type' => 'application/json; charset=utf-8']): Application|Response|\Illuminate\Contracts\Foundation\Application|ResponseFactory
+    public function respond($data, array $headers = ['Content-Type' => 'application/json; charset=utf-8']): JsonResponse
     {
         $data["request_id"] = request()->request_id;
-        return response(HelperUtil::autoJsonEncode($data), 200)->withHeaders($headers);
+        return response()->json($data)->withHeaders($headers);
     }
 
     /**
@@ -69,9 +70,9 @@ trait ApiResponse
      * @param  array  $data
      * @param $code
      *
-     * @return \Illuminate\Contracts\Foundation\Application|ResponseFactory|Application|Response
+     * @return JsonResponse
      */
-    public function status($status, array $data, $code = null): Application|Response|\Illuminate\Contracts\Foundation\Application|ResponseFactory
+    public function status($status, array $data, $code = null): JsonResponse
     {
         if ($code) {
             $this->setStatusCode($code);
@@ -91,9 +92,9 @@ trait ApiResponse
      * @param $message
      * @param  string  $status
      *
-     * @return \Illuminate\Contracts\Foundation\Application|ResponseFactory|Application|Response
+     * @return JsonResponse
      */
-    public function message($message, string $status = "success"): Application|Response|\Illuminate\Contracts\Foundation\Application|ResponseFactory
+    public function message($message, string $status = "success"): JsonResponse
     {
         return $this->status($status, [
             'messages' => $message,
@@ -104,9 +105,9 @@ trait ApiResponse
      * @param  array|POJOInterface  $data
      * @param  string  $status
      *
-     * @return \Illuminate\Contracts\Foundation\Application|ResponseFactory|Application|Response
+     * @return JsonResponse
      */
-    public function success(array|POJOInterface $data, string $status = "success"): Application|Response|\Illuminate\Contracts\Foundation\Application|ResponseFactory
+    public function success(array|POJOInterface $data, string $status = "success"): JsonResponse
     {
         if ($data instanceof POJOInterface) {
             $data = $data->toArray();
@@ -120,9 +121,9 @@ trait ApiResponse
      * @param $data
      * @param  string  $status
      *
-     * @return Application|\Illuminate\Contracts\Foundation\Application|Response|ResponseFactory
+     * @return JsonResponse
      */
-    public function created($data, string $status = "created"): Application|Response|\Illuminate\Contracts\Foundation\Application|ResponseFactory
+    public function created($data, string $status = "created"): JsonResponse
     {
         return $this->status($status, compact('data'), FoundationResponse::HTTP_CREATED);
     }
@@ -131,9 +132,9 @@ trait ApiResponse
     /**
      * @param  string  $status
      *
-     * @return \Illuminate\Contracts\Foundation\Application|ResponseFactory|Application|Response
+     * @return JsonResponse
      */
-    public function deleted(string $status = "deleted"): Application|Response|\Illuminate\Contracts\Foundation\Application|ResponseFactory
+    public function deleted(string $status = "deleted"): JsonResponse
     {
         return $this->status($status, [], FoundationResponse::HTTP_NO_CONTENT);
     }
@@ -146,10 +147,14 @@ trait ApiResponse
      * @param  string  $status
      * @param  string|null  $httpCode
      *
-     * @return \Illuminate\Contracts\Foundation\Application|ResponseFactory|Application|Response
+     * @return JsonResponse
      */
-    public function failed($message, int $code = FoundationResponse::HTTP_BAD_REQUEST, string $status = 'error', string $httpCode = null): Application|Response|\Illuminate\Contracts\Foundation\Application|ResponseFactory
-    {
+    public function failed(
+        $message,
+        int $code = FoundationResponse::HTTP_BAD_REQUEST,
+        string $status = 'error',
+        string $httpCode = null
+    ): JsonResponse {
         return $this->setStatusCode($code, $httpCode)->message($message, $status);
     }
 
@@ -158,9 +163,9 @@ trait ApiResponse
      *
      * @param  string  $message
      *
-     * @return \Application|\Illuminate\Contracts\Foundation\Application|\ResponseFactory|\Response
+     * @return JsonResponse
      */
-    public function notFond(string $message = 'Not Fond!'): \Application|\Illuminate\Contracts\Foundation\Application|\ResponseFactory|\Response
+    public function notFond(string $message = 'Not Fond!'): JsonResponse
     {
         return $this->failed($message, Foundationresponse::HTTP_NOT_FOUND);
     }
@@ -171,15 +176,15 @@ trait ApiResponse
      * @param  string  $message
      * @param  int  $code
      *
-     * @return mixed
+     * @return JsonResponse
      */
-    public function error(string $message = 'error', int $code = Foundationresponse::HTTP_UNPROCESSABLE_ENTITY): mixed
+    public function error(string $message = 'error', int $code = Foundationresponse::HTTP_UNPROCESSABLE_ENTITY): JsonResponse
     {
         return $this->failed($message, $code);
     }
 
 
-    public function errorWithEnum(\BackedEnum $enum)
+    public function errorWithEnum(\BackedEnum $enum): JsonResponse
     {
         return $this->error($enum->getMessage(), $enum->getCode());
     }
@@ -189,14 +194,14 @@ trait ApiResponse
      *
      * @param  string  $message
      *
-     * @return mixed
+     * @return JsonResponse
      */
-    public function internalError($message = "Internal Error!")
+    public function internalError(string $message = "Internal Error!"): JsonResponse
     {
         return $this->failed($message, FoundationResponse::HTTP_INTERNAL_SERVER_ERROR);
     }
 
-    public function returnSvg($svgStr)
+    public function returnSvg($svgStr): Response|ResponseFactory
     {
         return response($svgStr)->header('Content-type', 'image/svg+xml');
     }
