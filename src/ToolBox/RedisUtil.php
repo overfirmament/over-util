@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
  * @method incr(string $key)
  * @method setEx(string $key, int $ttl, string $value)
  * @method zAdd(string $key, ...$scoreAndMember)
- * @method zRangeByScore(string $key, int $min, int $max)
+ * @method array zRangeByScore(string $key, int $min, int $max, array $options = [])
  * @method zRangeByScoreWithScores(string $key, int $min, int $max)
  * @method zRange(string $key, int $start, int $stop)
  * @method zRangeWithScores(string $key, int $start, int $stop)
@@ -41,12 +41,24 @@ use Illuminate\Support\Str;
  * @method zScore(string $key, string $member)
  * @method zIncrBy(string $key, int $increment, string $member)
  * @method zRem(string $key, ...$members)
+ * @method zRevRangeByScore(string $key, string $max, string $min, array $options = [])
+ * @method zRevRangeByScoreWithScores(string $key, string $max, string $min)
+ * @method zRevRange(string $key, int $start, int $end, array $options = [])
+ * @method zCount(string $key, string $min, string $max)
+ * @method bool sisMember(string $key, string $member)
+ * @method int hIncrBy(string $key, string $field, int $increment)
+ * @method int hSetNx(string $key, string $field, mixed $value)
+ * @method int hExists(string $key, string $field)
+ * @method int lPush(string $key, mixed ...$values)
+ * @method int decrBy(string $key, int $value = 1)
+ * @method int decr(string $key)
  */
 class RedisUtil extends Redis
 {
     protected static $instances = [];
 
     protected Connection $redis;
+
 
 
     /**

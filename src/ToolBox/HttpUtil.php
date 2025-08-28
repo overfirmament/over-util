@@ -2,221 +2,106 @@
 
 namespace Overfirmament\OverUtils\ToolBox;
 
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\GuzzleException;
-use GuzzleHttp\Promise\Utils;
-use GuzzleHttp\Psr7\Response;
-use Illuminate\Http\Client\Pool;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Overfirmament\OverUtils\Pojo\Bean\HttpRequestBean;
 
-
+/**
+ * @method static \Illuminate\Http\Client\Factory globalMiddleware(callable $middleware)
+ * @method static \Illuminate\Http\Client\Factory globalRequestMiddleware(callable $middleware)
+ * @method static \Illuminate\Http\Client\Factory globalResponseMiddleware(callable $middleware)
+ * @method static \Illuminate\Http\Client\Factory globalOptions(\Closure|array $options)
+ * @method static \GuzzleHttp\Promise\PromiseInterface response(array|string|null $body = null, int $status = 200, array $headers = [])
+ * @method static \GuzzleHttp\Promise\PromiseInterface failedConnection(string|null $message = null)
+ * @method static \Illuminate\Http\Client\ResponseSequence sequence(array $responses = [])
+ * @method static bool preventingStrayRequests()
+ * @method static \Illuminate\Http\Client\Factory allowStrayRequests()
+ * @method static void recordRequestResponsePair(\Illuminate\Http\Client\Request $request, \Illuminate\Http\Client\Response|null $response)
+ * @method static void assertSent(callable $callback)
+ * @method static void assertSentInOrder(array $callbacks)
+ * @method static void assertNotSent(callable $callback)
+ * @method static void assertNothingSent()
+ * @method static void assertSentCount(int $count)
+ * @method static void assertSequencesAreEmpty()
+ * @method static \Illuminate\Support\Collection recorded(callable $callback = null)
+ * @method static \Illuminate\Http\Client\PendingRequest createPendingRequest()
+ * @method static \Illuminate\Contracts\Events\Dispatcher|null getDispatcher()
+ * @method static array getGlobalMiddleware()
+ * @method static void macro(string $name, object|callable $macro)
+ * @method static void mixin(object $mixin, bool $replace = true)
+ * @method static bool hasMacro(string $name)
+ * @method static void flushMacros()
+ * @method static mixed macroCall(string $method, array $parameters)
+ * @method static \Illuminate\Http\Client\PendingRequest baseUrl(string $url)
+ * @method static \Illuminate\Http\Client\PendingRequest withBody(\Psr\Http\Message\StreamInterface|string $content, string $contentType = 'application/json')
+ * @method static \Illuminate\Http\Client\PendingRequest asJson()
+ * @method static \Illuminate\Http\Client\PendingRequest asForm()
+ * @method static \Illuminate\Http\Client\PendingRequest attach(string|array $name, string|resource $contents = '', string|null $filename = null, array $headers = [])
+ * @method static \Illuminate\Http\Client\PendingRequest asMultipart()
+ * @method static \Illuminate\Http\Client\PendingRequest bodyFormat(string $format)
+ * @method static \Illuminate\Http\Client\PendingRequest withQueryParameters(array $parameters)
+ * @method static \Illuminate\Http\Client\PendingRequest contentType(string $contentType)
+ * @method static \Illuminate\Http\Client\PendingRequest acceptJson()
+ * @method static \Illuminate\Http\Client\PendingRequest accept(string $contentType)
+ * @method static \Illuminate\Http\Client\PendingRequest withHeaders(array $headers)
+ * @method static \Illuminate\Http\Client\PendingRequest withHeader(string $name, mixed $value)
+ * @method static \Illuminate\Http\Client\PendingRequest replaceHeaders(array $headers)
+ * @method static \Illuminate\Http\Client\PendingRequest withBasicAuth(string $username, string $password)
+ * @method static \Illuminate\Http\Client\PendingRequest withDigestAuth(string $username, string $password)
+ * @method static \Illuminate\Http\Client\PendingRequest withToken(string $token, string $type = 'Bearer')
+ * @method static \Illuminate\Http\Client\PendingRequest withUserAgent(string|bool $userAgent)
+ * @method static \Illuminate\Http\Client\PendingRequest withUrlParameters(array $parameters = [])
+ * @method static \Illuminate\Http\Client\PendingRequest withCookies(array $cookies, string $domain)
+ * @method static \Illuminate\Http\Client\PendingRequest maxRedirects(int $max)
+ * @method static \Illuminate\Http\Client\PendingRequest withoutRedirecting()
+ * @method static \Illuminate\Http\Client\PendingRequest withoutVerifying()
+ * @method static \Illuminate\Http\Client\PendingRequest sink(string|resource $to)
+ * @method static \Illuminate\Http\Client\PendingRequest timeout(int $seconds)
+ * @method static \Illuminate\Http\Client\PendingRequest connectTimeout(int $seconds)
+ * @method static \Illuminate\Http\Client\PendingRequest retry(array|int $times, \Closure|int $sleepMilliseconds = 0, callable|null $when = null, bool $throw = true)
+ * @method static \Illuminate\Http\Client\PendingRequest withOptions(array $options)
+ * @method static \Illuminate\Http\Client\PendingRequest withMiddleware(callable $middleware)
+ * @method static \Illuminate\Http\Client\PendingRequest withRequestMiddleware(callable $middleware)
+ * @method static \Illuminate\Http\Client\PendingRequest withResponseMiddleware(callable $middleware)
+ * @method static \Illuminate\Http\Client\PendingRequest beforeSending(callable $callback)
+ * @method static \Illuminate\Http\Client\PendingRequest throw(callable|null $callback = null)
+ * @method static \Illuminate\Http\Client\PendingRequest throwIf(callable|bool $condition)
+ * @method static \Illuminate\Http\Client\PendingRequest throwUnless(callable|bool $condition)
+ * @method static \Illuminate\Http\Client\PendingRequest dump()
+ * @method static \Illuminate\Http\Client\PendingRequest dd()
+ * @method static \Illuminate\Http\Client\Response get(string $url, array|string|null $query = null)
+ * @method static \Illuminate\Http\Client\Response head(string $url, array|string|null $query = null)
+ * @method static \Illuminate\Http\Client\Response post(string $url, array $data = [])
+ * @method static \Illuminate\Http\Client\Response patch(string $url, array $data = [])
+ * @method static \Illuminate\Http\Client\Response put(string $url, array $data = [])
+ * @method static \Illuminate\Http\Client\Response delete(string $url, array $data = [])
+ * @method static array pool(callable $callback)
+ * @method static \Illuminate\Http\Client\Response send(string $method, string $url, array $options = [])
+ * @method static \GuzzleHttp\Client buildClient()
+ * @method static \GuzzleHttp\Client createClient(\GuzzleHttp\HandlerStack $handlerStack)
+ * @method static \GuzzleHttp\HandlerStack buildHandlerStack()
+ * @method static \GuzzleHttp\HandlerStack pushHandlers(\GuzzleHttp\HandlerStack $handlerStack)
+ * @method static \Closure buildBeforeSendingHandler()
+ * @method static \Closure buildRecorderHandler()
+ * @method static \Closure buildStubHandler()
+ * @method static \GuzzleHttp\Psr7\RequestInterface runBeforeSendingCallbacks(\GuzzleHttp\Psr7\RequestInterface $request, array $options)
+ * @method static array mergeOptions(array ...$options)
+ * @method static \Illuminate\Http\Client\PendingRequest stub(callable $callback)
+ * @method static \Illuminate\Http\Client\PendingRequest async(bool $async = true)
+ * @method static \GuzzleHttp\Promise\PromiseInterface|null getPromise()
+ * @method static \Illuminate\Http\Client\PendingRequest setClient(\GuzzleHttp\Client $client)
+ * @method static \Illuminate\Http\Client\PendingRequest setHandler(callable $handler)
+ * @method static array getOptions()
+ * @method static \Illuminate\Http\Client\PendingRequest|mixed when(\Closure|mixed|null $value = null, callable|null $callback = null, callable|null $default = null)
+ * @method static \Illuminate\Http\Client\PendingRequest|mixed unless(\Closure|mixed|null $value = null, callable|null $callback = null, callable|null $default = null)
+ *
+ * @see \Illuminate\Http\Client\Factory
+ */
 class HttpUtil
 {
-    protected static $instance;
-    private Client $client;
-
-    protected array $dontReport = [
-
-    ];
-
-
-    protected array $originOptions = [
-        "timeout" => 10,
-    ];
-
-    private function __construct()
+    public static function __callStatic(string $name, array $arguments)
     {
-        $this->client = new Client();
-        $this->dontReport = array_merge($this->dontReport, config("httputil.log.dont_report", []));
+        $header = ["X-REQUEST-ID" => HelperUtil::generateRequestId()];
+
+        return Http::replaceHeaders($header)->$name(...$arguments);
     }
-
-    public static function getInstance(): HttpUtil
-    {
-        if (self::$instance === null) {
-            self::$instance = new self();
-        }
-        return self::$instance;
-    }
-
-
-    public function setTimeout(float $timeout): HttpUtil
-    {
-        $this->originOptions["timeout"] = $timeout;
-        return $this;
-    }
-
-    /**
-     * @param  string  $url
-     * @param  array  $options
-     *
-     * @return mixed
-     * @throws GuzzleException
-     */
-    public function get(string $url, array $options = []): mixed
-    {
-        return $this->request("GET", $url, $options);
-    }
-
-    /**
-     * @param $url
-     * @param  array  $options
-     *
-     * @return mixed
-     * @throws GuzzleException
-     */
-    public function post($url, array $options = []): mixed
-    {
-        return $this->request("POST", $url, $options);
-    }
-
-
-    /**
-     * @param  string  $method
-     * @param  string  $url
-     * @param  array  $options
-     *
-     * @return mixed
-     * @throws GuzzleException
-     */
-    public function request(string $method = "GET", string $url, array $options = []): mixed
-    {
-        $options = array_merge($this->originOptions, $options);
-        $response = $this->client->request($method, $url, $options);
-        $result = HelperUtil::autoJsonDecode($response->getBody()->getContents());
-        $this->log($url, $options, $result, $response->getStatusCode(), $method);
-
-        return $result;
-    }
-
-
-    /**
-     * 并发请求 get
-     *
-     * @param  array<HttpRequestBean>  $request
-     * @param  bool  $ajax
-     *
-     * @return array
-     */
-    public function getAsync(array $request, bool $ajax = true): array
-    {
-        $promises = array_map(function ($bean) {
-            return $this->client->getAsync(
-                $bean->getUrl(),
-                [
-                    "headers" => $bean->getHeaders(),
-                    "query"   => $bean->getQuery()
-                ]
-            );
-        }, $request);
-
-        if ($ajax) {
-            $responses = [];
-            foreach(Utils::settle($promises)->wait() as $key => $value) {
-                $state = $value["state"];
-                /**
-                 * @var Response $response
-                 */
-                $response = $value["value"];
-                $jsonRes = $state == "fulfilled" ? HelperUtil::autoJsonDecode($response->getBody()->getContents()) : null;
-                $responses[$key] = $jsonRes;
-
-                $this->log($request[$key]->getUrl(), [
-                    "headers" => $request[$key]->getHeaders(),
-                    "query" => $request[$key]->getQuery(),
-                    "json" => $request[$key]->getJson(),
-                    "body" => $request[$key]->getBody(),
-                ], $jsonRes, $response->getStatusCode());
-            }
-
-            return $responses;
-        } else {
-            return Utils::settle($promises)->wait();
-        }
-    }
-
-
-    /**
-     * @param  array<HttpRequestBean>  $request
-     *
-     * @return array
-     */
-    public function postAsync(array $request): array
-    {
-        $promises = [];
-        for ($i = 0; $i < count($request); $i++) {
-            $bean = $request[$i];
-
-            $promises[$bean->getName() ?: $i] = $this->client->postAsync(
-                $bean->getUrl(),
-                [
-                    "headers" => $bean->getHeaders(),
-                    "json" => $bean->getJson()
-                ]
-            );
-        }
-
-        return Utils::settle($promises)->wait();
-    }
-
-
-    /**
-     * @param  array<HttpRequestBean>  $request
-     *
-     * @return array
-     */
-    public function async(array $request): array
-    {
-        $promises = [];
-        for ($i = 0; $i < count($request); $i++) {
-            $bean = $request[$i];
-
-            $options = $bean->getMethod() == "GET" ? [
-                "headers" => $bean->getHeaders(),
-                "query" => $bean->getQuery()
-            ] : [
-                "headers" => $bean->getHeaders(),
-                "json" => $bean->getJson()
-            ];
-            $promises[$bean->getName() ?: $i] = $this->client->requestAsync(
-                $bean->getMethod(),
-                $bean->getUrl(),
-                $options
-            );
-        }
-
-        return Utils::settle($promises)->wait();
-    }
-
-
-    private function log($url, $options, ?array $response, int $httpCode, $method = "GET"): void
-    {
-        $full = Str::after($url, "//");
-        if (collect($this->dontReport)->contains(fn($pattern) => Str::is($pattern, $full))) {
-            return ;
-        }
-
-        $log = [
-            "request_id" => request()->request_id ?? "",
-            "method" => $method,
-            "request" => [
-                "url" => $url,
-                "options" => $options,
-            ],
-            "reponse" => [
-                "status" => $httpCode,
-                "contents" => $response
-            ],
-        ];
-
-        Log::channel('http_out')->info('http request out', $log);
-    }
-
-
-    // 其他网络请求方法，例如 put、delete 等
-
-    // 私有化 clone 方法，防止被复制
-    private function __clone() { }
 }
