@@ -2,7 +2,6 @@
 
 namespace Overfirmament\OverUtils\ToolBox;
 
-use App\Utils\HelperUtil;
 use Exception;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Channel\AbstractChannel;

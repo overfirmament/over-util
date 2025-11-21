@@ -4,8 +4,11 @@
     "require": {
         "php": "^8.2",
         "monolog/monolog": "^3.4",
-        "laravel/framework": "~10.0|~11.0|~12.0",
-        "guzzlehttp/guzzle": "^7.8"
+        "laravel/framework": "~12.0",
+        "php-amqplib/php-amqplib": "^3.7",
+        "spatie/laravel-data": "^4.18",
+        "saloonphp/saloon": "^3.14",
+        "saloonphp/laravel-plugin": "^3.6"
     },
     "autoload": {
         "psr-4": {

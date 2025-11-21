@@ -2,11 +2,9 @@
 
 namespace Overfirmament\OverUtils\ToolBox;
 
-use App\Exceptions\BizException;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Support\Collection;
-use function App\Utils\config;
 
 class HelperUtil
 {
@@ -35,7 +33,15 @@ class HelperUtil
         return mb_convert_encoding($string, 'GBK', 'UTF-8');
     }
 
-    public static function array_iconv($str, $in_charset = "gbk", $out_charset = "utf-8")
+    /**
+     * @param $str
+     * @param  string  $in_charset
+     * @param  string  $out_charset
+     * @deprecated
+     *
+     * @return array|false|mixed|string|string[]|null
+     */
+    public static function array_iconv($str, string $in_charset = "gbk", string $out_charset = "utf-8"): mixed
     {
         if (is_array($str)) {
             foreach ($str as $k => $v) {
@@ -49,6 +55,11 @@ class HelperUtil
                 return $str;
             }
         }
+    }
+
+    public static function arrayIconv($str, $in_charset = "gbk", $out_charset = "utf-8")
+    {
+        return static::array_iconv($str, $in_charset, $out_charset);
     }
 
     public static function isJson($string): bool
@@ -75,14 +86,13 @@ class HelperUtil
     }
 
 
-    /**
-     * @param  string|null  $json
-     *
-     * @return mixed
-     */
-    public static function autoJsonDecode(?string $json): mixed
+    public static function autoJsonDecode(?string $json, bool $forceArray = true): array
     {
-        return json_decode($json, true);
+        if (!$json && $forceArray) {
+            return [];
+        }
+
+        return (array) json_decode($json, $forceArray);
     }
 
 
@@ -121,12 +131,78 @@ class HelperUtil
     /**
      * @return array|string|string[]
      */
-    public static function uniqeStr(): array|string
+    public static function uniqeStr(string $slug = ""): array|string
     {
         $uuid = \Str::uuid()->toString();
-        return str_replace("-", "", $uuid);
+        return str_replace("-", $slug, $uuid);
     }
 
+
+    /**
+     * @param $page
+     * @param $pageSize
+     * @param  int  $max_page
+     * @param  int  $maxPageSize
+     *
+     * @return array
+     */
+    public static function getPageInfo($page, $pageSize, int $max_page = 500, int $maxPageSize = 50): array
+    {
+        //设置初始页和最大页数
+        $page = intval($page);
+        $page = $page <= 0 ? 1 : $page;
+        $page = min($page, $max_page); //最大显示页数
+
+        //设置每页请求数和最大数
+        $pageSize = intval($pageSize); //每页请求条数
+        $pageSize = $pageSize > 0 && $pageSize <= $maxPageSize ? $pageSize : $maxPageSize;
+
+        //分页设置
+        $startNum = ($page - 1) * $pageSize;
+
+        return [$page, $pageSize, $startNum];
+    }
+
+
+    /**
+     * @param $value
+     *
+     * @return float|int|mixed|string
+     */
+    public static function redisGzinflate($value): mixed
+    {
+        if (!$value || is_numeric($value) || !is_string($value)) {
+            return $value;
+        }
+        $value_un = unserialize($value);
+        if (is_string($value_un) && preg_match('/^WI.*/', $value_un)) {
+            //@file_put_contents('/var/log/bbs/test.log', "0_$key".'_'. strlen($value) ."\r\n", FILE_APPEND);
+            $value = unserialize(gzinflate(ltrim($value_un, 'WI')));
+        }
+        return $value;
+    }
+
+
+    /**
+     * 主要用于discuzx项目的redis数据存入前加密
+     * \memory_driver_redis::redis_gzinflate
+     *
+     * @param $value
+     *
+     * @return string
+     */
+    public static function redisGzdeflate($value): string
+    {
+        $serialize = serialize($value);
+
+        if(strlen($serialize) > 20000){
+            //@file_put_contents('/var/log/bbs/test.log', "1_$key".'_'. strlen($value) ."\r\n", FILE_APPEND);
+            $serialize = 'WI' . gzdeflate($serialize, 9);
+            $serialize = serialize($serialize);
+        }
+
+        return $serialize;
+    }
 
     /**
      * @param  string  $str
@@ -310,18 +386,9 @@ class HelperUtil
      * @param  string  $path
      *
      * @return string
-     * @throws BizException
      */
     public static function spliceUrl(string $domain, string $path): string
     {
-        if (blank($domain)) {
-            throw new BizException("The parameter [domain] is expected, but it's blank");
-        }
-
-        if (!\Str::startsWith($domain, ["http", "https"])) {
-            throw new BizException("The parameter [domain] is not a legal domain name");
-        }
-
         return trim($domain, "/") . "/" . trim($path, "/");
     }
 
@@ -364,5 +431,253 @@ class HelperUtil
         return $filter ? array_filter($value, function ($v) {
             return $v !== '' && $v !== null;
         }) : $value;
+    }
+
+
+    public static function convertEmptyArrayToObject($data)
+    {
+        if (is_array($data)) {
+            // 如果是空数组，转换成空对象
+            if (empty($data)) {
+                return new \stdClass();
+            }
+
+            // 递归处理数组中的每个元素
+            foreach ($data as $key => $value) {
+                $data[$key] = self::convertEmptyArrayToObject($value);
+            }
+        }
+        return $data;
+    }
+
+
+    /**
+     * 获取客户端ip
+     *
+     * @return string|null
+     */
+    public static function getClientIp(): ?string
+    {
+        $validator = fn($ip) => filter_var($ip, FILTER_VALIDATE_IP);
+
+        return once(function () use ($validator) {
+            $candidates = array_filter([
+                request()->header('X-Forwarded-For'),
+                request()->header('X-Real-IP'),
+                request()->header('CLIENT_IP'),
+                request()->header('CF-Connecting-IP'),
+                request()->ip(),
+            ], fn($v) => $validator($v));
+
+            return collect($candidates)
+                ->flatMap(fn($v) => explode(',', $v))
+                ->map(fn($v) => trim($v))
+                ->first($validator, request()->ip());
+        });
+    }
+
+
+    /**
+     * 内容截取
+     *
+     * @param $string
+     * @param $length
+     * @param  string  $dot
+     * @param  string  $charset
+     *
+     * @return string
+     */
+    public static function cutstr($string, $length, string $dot = ' ...', string $charset = 'utf-8'): string
+    {
+        if (strlen($string) <= $length) {
+            return $string;
+        }
+
+        $pre    = chr(1);
+        $end    = chr(1);
+        $string = str_replace(['&amp;', '&quot;', '&lt;', '&gt;'],
+            [$pre.'&'.$end, $pre.'"'.$end, $pre.'<'.$end, $pre.'>'.$end], $string);
+
+        $strcut = '';
+        if (strtolower($charset) == 'utf-8') {
+
+            $n = $tn = $noc = 0;
+            while ($n < strlen($string)) {
+
+                $t = ord($string[$n]);
+                if ($t == 9 || $t == 10 || (32 <= $t && $t <= 126)) {
+                    $tn = 1;
+                    $n++;
+                    $noc++;
+                } elseif (194 <= $t && $t <= 223) {
+                    $tn  = 2;
+                    $n   += 2;
+                    $noc += 2;
+                } elseif (224 <= $t && $t <= 239) {
+                    $tn  = 3;
+                    $n   += 3;
+                    $noc += 2;
+                } elseif (240 <= $t && $t <= 247) {
+                    $tn  = 4;
+                    $n   += 4;
+                    $noc += 2;
+                } elseif (248 <= $t && $t <= 251) {
+                    $tn  = 5;
+                    $n   += 5;
+                    $noc += 2;
+                } elseif ($t == 252 || $t == 253) {
+                    $tn  = 6;
+                    $n   += 6;
+                    $noc += 2;
+                } else {
+                    $n++;
+                }
+
+                if ($noc >= $length) {
+                    break;
+                }
+
+            }
+            if ($noc > $length) {
+                $n -= $tn;
+            }
+
+            $strcut = substr($string, 0, $n);
+
+        } else {
+            $_length = $length - 1;
+            for ($i = 0; $i < $length; $i++) {
+                if (ord($string[$i]) <= 127) {
+                    $strcut .= $string[$i];
+                } else {
+                    if ($i < $_length) {
+                        $strcut .= $string[$i].$string[++$i];
+                    }
+                }
+            }
+        }
+
+        $strcut = str_replace([$pre.'&'.$end, $pre.'"'.$end, $pre.'<'.$end, $pre.'>'.$end],
+            ['&amp;', '&quot;', '&lt;', '&gt;'], $strcut);
+
+        $pos = strrpos($strcut, chr(1));
+        if ($pos !== false) {
+            $strcut = substr($strcut, 0, $pos);
+        }
+
+        return $strcut.$dot;
+    }
+
+
+    /**
+     * @param $datestr
+     *
+     * @return false|int
+     */
+    public static function human2Unix($datestr): false|int
+    {
+        if ($datestr === '') {
+            return false;
+        }
+
+        $datestr = preg_replace('/\040+/', ' ', trim($datestr));
+
+        if (!preg_match('/^(\d{2}|\d{4})\-[0-9]{1,2}\-[0-9]{1,2}\s[0-9]{1,2}:[0-9]{1,2}(?::[0-9]{1,2})?(?:\s[AP]M)?$/i',
+            $datestr)) {
+            return false;
+        }
+
+        sscanf($datestr, '%d-%d-%d %s %s', $year, $month, $day, $time, $ampm);
+        sscanf($time, '%d:%d:%d', $hour, $min, $sec);
+        isset($sec) or $sec = 0;
+
+        if (isset($ampm)) {
+            $ampm = strtolower($ampm);
+
+            if ($ampm[0] === 'p' && $hour < 12) {
+                $hour += 12;
+            } elseif ($ampm[0] === 'a' && $hour === 12) {
+                $hour = 0;
+            }
+        }
+        return mktime($hour, $min, $sec, $month, $day, $year);
+    }
+
+
+    public static function unserialize(?string $string): mixed
+    {
+        if (empty($string)) {
+            return null;
+        }
+
+        return self::autoUnserialize($string);
+    }
+
+
+    /**
+     * @param $string
+     *
+     * @return mixed
+     */
+    public static function autoUnserialize($string): mixed
+    {
+        if (($ret = unserialize($string)) === false) {
+            $ret = unserialize(stripslashes($string));
+        }
+        return $ret;
+    }
+
+    /**
+     * 判断当前用户名是否可以进行修改
+     *
+     * @param $username
+     *
+     * @return bool
+     */
+    public static function originNameCheck($username): bool
+    {
+        $pattern = '/^kashen\d{8,}$/';
+        $return  = false;
+        if (preg_match($pattern, $username)) {
+            $return = true;
+        }
+
+        return $return;
+    }
+
+
+    /**
+     * 判断是否是序列化数据
+     *
+     * @param $data
+     *
+     * @return bool
+     */
+    public static function isSerialize($data): bool
+    {
+        $data = trim($data);
+        if ('N;' == $data) {
+            return true;
+        }
+        if (!preg_match('/^([adObis]):/', $data, $badions)) {
+            return false;
+        }
+        switch ($badions[1]) {
+            case 'a' :
+            case 'O' :
+            case 's' :
+                if (preg_match("/^{$badions[1]}:[0-9]+:.*[;}]\$/s", $data)) {
+                    return true;
+                }
+                break;
+            case 'b' :
+            case 'i' :
+            case 'd' :
+                if (preg_match("/^{$badions[1]}:[0-9.E-]+;\$/", $data)) {
+                    return true;
+                }
+                break;
+        }
+        return false;
     }
 }

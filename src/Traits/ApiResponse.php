@@ -2,13 +2,11 @@
 
 namespace Overfirmament\OverUtils\Traits;
 
-
 use Illuminate\Contracts\Routing\ResponseFactory;
 use Illuminate\Foundation\Application;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
-use Overfirmament\OverUtils\ToolBox\HelperUtil;
-use Overfirmament\OverUtils\Pojo\POJOInterface;
+use Spatie\LaravelData\Data;
 use Symfony\Component\HttpFoundation\Response as FoundationResponse;
 
 trait ApiResponse
@@ -16,6 +14,46 @@ trait ApiResponse
     protected int $statusCode = FoundationResponse::HTTP_OK;
 
     protected int $httpCode = FoundationResponse::HTTP_OK;
+
+    protected string $messageField = 'messages';
+
+    protected bool $useTime = true;
+    protected string $timeField = 'date';
+
+    protected bool $isJsonP = false;
+    protected string $jsonPCallback = 'jsonpCallback';
+
+
+    /**
+     * @return $this
+     */
+    public function useJsonP(string $callback = 'jsonpCallback'): static
+    {
+        $this->isJsonP = true;
+        $this->jsonPCallback = $callback;
+
+        return $this;
+    }
+
+
+    /**
+     * @return $this
+     */
+    public function messageField(string $field = 'message'): static
+    {
+        $this->messageField = $field;
+
+        return $this;
+    }
+
+
+    public function useTime(string $field = 'date'): static
+    {
+        $this->useTime = true;
+        $this->timeField = $field;
+
+        return $this;
+    }
 
 
     /**
@@ -62,13 +100,16 @@ trait ApiResponse
     public function respond($data, array $headers = ['Content-Type' => 'application/json; charset=utf-8']): JsonResponse
     {
         $data["request_id"] = request()->request_id;
+        if ($this->isJsonP) {
+            return response()->jsonp($this->jsonPCallback, $data);
+        }
         return response()->json($data)->withHeaders($headers);
     }
 
     /**
      * @param $status
      * @param  array  $data
-     * @param $code
+     * @param  null  $code
      *
      * @return JsonResponse
      */
@@ -77,12 +118,16 @@ trait ApiResponse
         if ($code) {
             $this->setStatusCode($code);
         }
-        $status = [
+        $dataBag = [
             'status' => $status,
             'code'   => $this->statusCode,
         ];
 
-        $data = array_merge($status, $data);
+        if ($this->useTime) {
+            $dataBag[$this->timeField] = now()->getTimestamp();
+        }
+
+        $data = array_merge($dataBag, $data);
 
         return $this->respond($data);
     }
@@ -97,22 +142,46 @@ trait ApiResponse
     public function message($message, string $status = "success"): JsonResponse
     {
         return $this->status($status, [
-            'messages' => $message,
+            $this->messageField => $message,
+            "data"              => [],
         ]);
     }
 
     /**
-     * @param  array|POJOInterface  $data
+     * @param  array|Data  $data
      * @param  string  $status
      *
      * @return JsonResponse
      */
-    public function success(array|POJOInterface $data, string $status = "success"): JsonResponse
+    public function success(array|Data $data, string $status = "success"): JsonResponse
     {
-        if ($data instanceof POJOInterface) {
+        if ($data instanceof Data) {
             $data = $data->toArray();
         }
-        return $this->status($status, compact('data'));
+        return $this->status($status, array_merge(compact('data'), [$this->messageField => '']));
+    }
+
+
+    public function jsonp(array|Data $data, string $callback = 'jsonpCallback', string $message = "success"): JsonResponse
+    {
+        if ($data instanceof Data) {
+            $data = $data->toArray();
+        }
+
+        return $this->useJsonP($callback)->messageField()->status("success", array_merge($data, [$this->messageField => $message]));
+    }
+
+
+    /**
+     * @param  array|Data  $data
+     *
+     * @return JsonResponse
+     */
+    public function listData(array|Data $data): JsonResponse
+    {
+        $data = $data instanceof Data ? $data->toArray() : $data;
+
+        return $this->success(['list' => $data]);
     }
 
     /**
@@ -165,8 +234,8 @@ trait ApiResponse
      *
      * @return JsonResponse
      */
-    public function notFond(string $message = 'Not Fond!'): JsonResponse
-    {
+    public function notFond(string $message = 'Not Fond!'
+    ): JsonResponse {
         return $this->failed($message, Foundationresponse::HTTP_NOT_FOUND);
     }
 
@@ -186,7 +255,7 @@ trait ApiResponse
 
     public function errorWithEnum(\BackedEnum $enum): JsonResponse
     {
-        return $this->error($enum->getMessage(), $enum->getCode());
+        return $this->error($enum->message(), $enum->value);
     }
 
     /**
@@ -201,7 +270,12 @@ trait ApiResponse
         return $this->failed($message, FoundationResponse::HTTP_INTERNAL_SERVER_ERROR);
     }
 
-    public function returnSvg($svgStr): Response|ResponseFactory
+    /**
+     * @param $svgStr
+     *
+     * @return \Illuminate\Contracts\Foundation\Application|ResponseFactory|Application|Response
+     */
+    public function returnSvg($svgStr): Application|Response|\Illuminate\Contracts\Foundation\Application|ResponseFactory
     {
         return response($svgStr)->header('Content-type', 'image/svg+xml');
     }

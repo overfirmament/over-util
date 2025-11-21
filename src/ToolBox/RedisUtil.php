@@ -52,6 +52,7 @@ use Illuminate\Support\Str;
  * @method int lPush(string $key, mixed ...$values)
  * @method int decrBy(string $key, int $value = 1)
  * @method int decr(string $key)
+ * @method array scan(int $cursor, string $pattern = "", string $key = "", int $count = null)
  */
 class RedisUtil extends Redis
 {
