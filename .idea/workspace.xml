@@ -4,29 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ceceb2ed-cd55-459f-aaf5-1edaf5e59c21" name="更改" comment="">
-      <change afterPath="$PROJECT_DIR$/src/Console/PublishResetCache.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/Traits/EnumHandleTrait.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/composer.json" beforeDir="false" afterPath="$PROJECT_DIR$/composer.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/composer.lock" beforeDir="false" afterPath="$PROJECT_DIR$/composer.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/logging_channel.php" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/over_util.php" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Annotations/FieldAlia.php" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Annotations/GenericsType.php" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Annotations/Id.php" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Console/InstallCommand.php" beforeDir="false" afterPath="$PROJECT_DIR$/src/Console/InstallCommand.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Listeners/LogHttpOutRequest.php" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Listeners/LogHttpOutResponse.php" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Logger/LogFormatter.php" beforeDir="false" afterPath="$PROJECT_DIR$/src/Logger/LogFormatter.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/OverUtilServiceProvider.php" beforeDir="false" afterPath="$PROJECT_DIR$/src/OverUtilServiceProvider.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Pojo/BasePOJO.php" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Pojo/Bean/HttpRequestBean.php" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Pojo/POJOInterface.php" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/ToolBox/HelperUtil.php" beforeDir="false" afterPath="$PROJECT_DIR$/src/ToolBox/HelperUtil.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/ToolBox/RabbitMqUtil.php" beforeDir="false" afterPath="$PROJECT_DIR$/src/ToolBox/RabbitMqUtil.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/ToolBox/RedisUtil.php" beforeDir="false" afterPath="$PROJECT_DIR$/src/ToolBox/RedisUtil.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/Traits/ApiResponse.php" beforeDir="false" afterPath="$PROJECT_DIR$/src/Traits/ApiResponse.php" afterDir="false" />
-    </list>
+    <list default="true" id="ceceb2ed-cd55-459f-aaf5-1edaf5e59c21" name="更改" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
