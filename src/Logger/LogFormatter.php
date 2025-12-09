@@ -11,7 +11,7 @@ class LogFormatter extends JsonFormatter
     public function format(LogRecord $record): string
     {
         $record    = $this->setDateFormat("Y-m-d H:i:s")->normalizeRecord($record);
-        $requestId = (request()->request_id ?: ($record["context"]["request_id"] ?? $record["context"]["requestId"] ?? "")) ?: "Local Command Line";
+        $requestId = (request()->request_id ?: (data_get($record, 'context.request_id') ?? data_get('context.requestId') ?? "")) ?: "Local Command Line";
         $record    = array_merge(["request_id" => $requestId], $record);
         if (is_array($record["context"])) {
             unset($record["context"]["request_id"], $record["context"]["requestId"]);

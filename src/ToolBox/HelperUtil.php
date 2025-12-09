@@ -17,7 +17,7 @@ class HelperUtil
      */
     public static function convertGbk(?string $string): string
     {
-        return iconv('GBK', 'UTF-8', $string);
+        return iconv('GBK', 'UTF-8//IGNORE', $string);
     }
 
     /**

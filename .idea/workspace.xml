@@ -4,7 +4,17 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ceceb2ed-cd55-459f-aaf5-1edaf5e59c21" name="更改" comment="" />
+    <list default="true" id="ceceb2ed-cd55-459f-aaf5-1edaf5e59c21" name="更改" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/laravel-idea-personal.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/laravel-idea.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/php.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/phpspec.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Logger/LogFormatter.php" beforeDir="false" afterPath="$PROJECT_DIR$/src/Logger/LogFormatter.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ToolBox/HelperUtil.php" beforeDir="false" afterPath="$PROJECT_DIR$/src/ToolBox/HelperUtil.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ToolBox/RedisUtil.php" beforeDir="false" afterPath="$PROJECT_DIR$/src/ToolBox/RedisUtil.php" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -180,6 +190,8 @@
       <workItem from="1763714687843" duration="871000" />
       <workItem from="1763715573655" duration="209000" />
       <workItem from="1763715795972" duration="5587000" />
+      <workItem from="1763879878615" duration="548000" />
+      <workItem from="1765262326728" duration="1135000" />
     </task>
     <servers />
   </component>

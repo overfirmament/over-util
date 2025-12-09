@@ -53,6 +53,8 @@ use Illuminate\Support\Str;
  * @method int decrBy(string $key, int $value = 1)
  * @method int decr(string $key)
  * @method array scan(int $cursor, string $pattern = "", string $key = "", int $count = null)
+ * @method string rPop(string $key)
+ * @method int lLen(string $key)
  */
 class RedisUtil extends Redis
 {
@@ -76,6 +78,31 @@ class RedisUtil extends Redis
         });
     }
 
+
+    /**
+     * 注销指定连接
+     *
+     * @param  string  $connection
+     *
+     * @return void
+     */
+    public static function clearInstance(string $connection = 'default'): void
+    {
+        if (isset(static::$instances[$connection])) {
+            unset(static::$instances[$connection]);
+        }
+    }
+
+
+    /**
+     * 返回所有连接实例
+     *
+     * @return array
+     */
+    public static function getInstances(): array
+    {
+        return static::$instances;
+    }
 
 
     /**
