@@ -30,13 +30,6 @@ class AlarmUtil
      */
     protected string $connection = 'default';
 
-    /**
-     * 是否开启限制
-     *
-     * @var bool
-     */
-    protected bool $limited = false;
-
     public static function init(?string $robotName = null): static
     {
         $instance = new static();
@@ -49,19 +42,6 @@ class AlarmUtil
         $instance->connection = $config["connection"] ?? 'default';
 
         return $instance;
-    }
-
-
-    /**
-     * @param  true  $enable
-     *
-     * @return $this
-     */
-    public function limit(true $enable = true): static
-    {
-        $this->limited = $enable;
-
-        return $this;
     }
 
     /**
@@ -104,7 +84,7 @@ class AlarmUtil
      */
     protected function checkLimit(): bool
     {
-        if ($this->limited && filled($this->alarmLimitKey) && filled($this->alarmLimit)) {
+        if (filled($this->alarmLimitKey) && filled($this->alarmLimit)) {
             $hasAlarm = RedisUtil::init($this->connection)->get($this->alarmLimitKey);
             if ($hasAlarm >= $this->alarmLimit) {
                 return false;
@@ -119,7 +99,7 @@ class AlarmUtil
      */
     protected function recordLimit(): void
     {
-        if ($this->limited && filled($this->alarmLimitKey) && filled($this->alarmLimit)) {
+        if (filled($this->alarmLimitKey) && filled($this->alarmLimit)) {
             $redis = RedisUtil::init($this->connection);
             if ($redis->exists($this->alarmLimitKey)) {
                 $redis->incr($this->alarmLimitKey);
