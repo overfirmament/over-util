@@ -30,6 +30,10 @@ class AlarmUtil
      */
     protected string $connection = 'default';
 
+    protected string $traceId = '';
+
+    protected string $prefix = '';
+
     public static function init(?string $robotName = null): static
     {
         $instance = new static();
@@ -40,6 +44,7 @@ class AlarmUtil
         $instance->url = $config["url"] ?? '';
         $instance->key = $config["key"] ?? '';
         $instance->connection = $config["connection"] ?? 'default';
+        $instance->prefix = Str::slug(config('app.name'));
 
         return $instance;
     }
@@ -56,8 +61,21 @@ class AlarmUtil
     public function setLimit(int $limit, string $alarmKey, int $ttl): static
     {
         $this->alarmLimit = $limit;
-        $this->alarmLimitKey = Str::slug(config('app.name')) . ':alarm:'. $alarmKey;
+        $this->alarmLimitKey = $this->prefix . ':alarm:'. $alarmKey;
         $this->alarmLimitExpire = $ttl;
+
+        return $this;
+    }
+
+
+    /**
+     * @param  string  $traceId
+     *
+     * @return $this
+     */
+    public function setTraceId(string $traceId): static
+    {
+        $this->traceId = $traceId;
 
         return $this;
     }
@@ -147,6 +165,10 @@ class AlarmUtil
             return false;
         }
 
+        $title .= "\n project: " . config('app.name');
+        if ($this->traceId) {
+            $title .= "\n traceId: " . $this->traceId;
+        }
         $body = [
             "msgtype" => "text",
             "text" => [
@@ -187,6 +209,10 @@ class AlarmUtil
         ];
 
         $word = $title . "\n";
+        $word .= "#### project: " . config('app.name') . "\n";
+        if ($this->traceId) {
+            $word .= "#### traceId: " . $this->traceId . "\n";
+        }
         foreach ($content as $name => $line) {
             $word .= ">" . $name . ":" . (is_array($line) ? HelperUtil::autoJsonEncode($line) : $line) . "\n";
         }
