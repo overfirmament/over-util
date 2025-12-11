@@ -4,6 +4,7 @@ namespace Overfirmament\OverUtils\ToolBox;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
+use Illuminate\Support\Str;
 use Psr\Http\Message\ResponseInterface;
 
 class AlarmUtil
@@ -41,13 +42,10 @@ class AlarmUtil
         $instance = new static();
         $config = config("alarm.qy_wx.{$robotName}") ?: config("alarm.qy_wx.default");
         if (empty($config)) {
-            throw new \RuntimeException("请先在配置文件 [alarm.php] 中添加企微机器人配置");
+            throw new \RuntimeException("请先在配置文件 [alarm.php] 中添加机器人配置");
         }
         $instance->url = $config["url"] ?? '';
         $instance->key = $config["key"] ?? '';
-        $instance->alarmLimit = $config["alarmLimit"] ?? '';
-        $instance->alarmLimitKey = $config["alarmLimitKey"] ?? '';
-        $instance->alarmLimitExpire = $config["alarmLimitExpire"] ?? '';
         $instance->connection = $config["connection"] ?? 'default';
 
         return $instance;
@@ -78,8 +76,21 @@ class AlarmUtil
     public function setLimit(int $limit, string $alarmKey, int $ttl): static
     {
         $this->alarmLimit = $limit;
-        $this->alarmLimitKey = config('app.name') . ':alarm:'. $alarmKey;
+        $this->alarmLimitKey = Str::slug(config('app.name')) . ':alarm:'. $alarmKey;
         $this->alarmLimitExpire = $ttl;
+
+        return $this;
+    }
+
+
+    /**
+     * @param  string  $connect
+     *
+     * @return $this
+     */
+    public function connect(string $connect = 'default'): static
+    {
+        $this->connection = $connect;
 
         return $this;
     }
