@@ -270,6 +270,35 @@ class RabbitMqUtil
     }
 
 
+    /**
+     * @param  callable  $callback
+     *
+     * @return void
+     * @throws Throwable
+     */
+    public function consume(callable $callback): void
+    {
+        $consumer = $this->config["consumer"] ?? [];
+
+        $this->channel->basic_consume(
+            $this->queueName,
+            $consumer['tag'] ?? '',
+            $consumer['no_local'] ?? false,
+            $consumer['no_ack'] ?? false,
+            $consumer['exclusive'] ?? false,
+            $consumer['nowait'] ?? false,
+            $callback,
+            $consumer['ticket'] ?? null,
+            $consumer['arguments'] ?? []
+        );
+
+        while ($this->channel->is_consuming()) {
+            $this->channel->wait();
+        }
+
+        $this->close();
+    }
+
 
 //    /**
 //     * @throws Exception|\Throwable
