@@ -11,10 +11,19 @@ class LogFormatter extends JsonFormatter
     public function format(LogRecord $record): string
     {
         $record    = $this->setDateFormat("Y-m-d H:i:s")->normalizeRecord($record);
-        $requestId = (request()->request_id ?: (data_get($record, 'context.request_id') ?? data_get('context.requestId') ?? "")) ?: "Local Command Line";
-        $record    = array_merge(["request_id" => $requestId], $record);
-        if (is_array($record["context"])) {
-            unset($record["context"]["request_id"], $record["context"]["requestId"]);
+
+        // 在 record 数组 的 context 和 extra 中 寻找 trace id 或 traceId 字段
+        if(($traceId = (string) (request()->trace_id ?? request()->traceId))
+            || ($traceId = (string) (data_get($record, ['context', 'trace_id']) ?? data_get($record, ['context', 'traceId'])))
+            || ($traceId = (string) (data_get($record, ['extra', 'trace_id']) ?? data_get($record, ['extra', 'traceId'])))
+        ) {
+            $record    = array_merge(["trace_id" => $traceId], $record);
+            if (is_array($record["context"])) {
+                unset($record["context"]["traceId"], $record["context"]["trace_id"]);
+            }
+            if (is_array($record["extra"])) {
+                unset($record["extra"]["traceId"], $record["extra"]["trace_id"]);
+            }
         }
 
         $record   = $this->autoConvert2Utf8($record);

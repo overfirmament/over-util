@@ -15,7 +15,7 @@ trait ApiResponse
 
     protected int $httpCode = FoundationResponse::HTTP_OK;
 
-    protected string $messageField = 'messages';
+    protected string $messageField = 'message';
 
     protected bool $useTime = true;
     protected string $timeField = 'date';
@@ -159,6 +159,23 @@ trait ApiResponse
             $data = $data->toArray();
         }
         return $this->status($status, array_merge(compact('data'), [$this->messageField => '']));
+    }
+
+
+    /**
+     * @param  string  $token
+     * @param  string  $tokenType
+     * @param  int|null  $expiresIn
+     *
+     * @return JsonResponse
+     */
+    public function respondWithToken(string $token, string $tokenType = 'Bearer', ?int $expiresIn = null): JsonResponse
+    {
+        return $this->status('logged', [
+            'access_token' => $token,
+            'token_type'   => $tokenType,
+            'expires_in'   => $expiresIn ?: (auth()->factory()->getTTL() * 60),
+        ]);
     }
 
 

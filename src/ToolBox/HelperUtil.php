@@ -120,18 +120,29 @@ class HelperUtil
 
 
     /**
-     * @return array|string|string[]
+     * @return string
      */
-    public static function generateRequestId(): array|string
+    public static function generateRequestId(): string
     {
         return self::uniqeStr();
     }
 
 
     /**
-     * @return array|string|string[]
+     * @return string
      */
-    public static function uniqeStr(string $slug = ""): array|string
+    public static function traceId(): string
+    {
+        return self::uniqeStr();
+    }
+
+
+    /**
+     * @param  string  $slug
+     *
+     * @return string
+     */
+    public static function uniqeStr(string $slug = ""): string
     {
         $uuid = \Str::uuid()->toString();
         return str_replace("-", $slug, $uuid);
