@@ -99,7 +99,7 @@ trait ApiResponse
      */
     public function respond($data, array $headers = ['Content-Type' => 'application/json; charset=utf-8']): JsonResponse
     {
-        $data["request_id"] = request()->request_id;
+        $data["trace_id"] = request()->trace_id;
         if ($this->isJsonP) {
             return response()->jsonp($this->jsonPCallback, $data);
         }
