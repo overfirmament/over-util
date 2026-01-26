@@ -171,11 +171,11 @@ trait ApiResponse
      */
     public function respondWithToken(string $token, string $tokenType = 'Bearer', ?int $expiresIn = null): JsonResponse
     {
-        return $this->status('logged', [
+        return $this->status('logged', ['data' => [
             'access_token' => $token,
             'token_type'   => $tokenType,
             'expires_in'   => $expiresIn ?: (auth()->factory()->getTTL() * 60),
-        ]);
+        ]]);
     }
 
 
