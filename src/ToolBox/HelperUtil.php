@@ -182,15 +182,31 @@ class HelperUtil
      */
     public static function redisGzinflate($value): mixed
     {
+        // 1. 过滤无效输入
         if (!$value || is_numeric($value) || !is_string($value)) {
             return $value;
         }
-        $value_un = unserialize($value);
-        if (is_string($value_un) && preg_match('/^WI.*/', $value_un)) {
-            //@file_put_contents('/var/log/bbs/test.log', "0_$key".'_'. strlen($value) ."\r\n", FILE_APPEND);
-            $value = unserialize(gzinflate(ltrim($value_un, 'WI')));
+        // 2. 安全反序列化，添加错误抑制和检查
+        $value_un = @unserialize($value);
+        if ($value_un === false) {
+            return $value; // 或抛出异常取决于上下文
         }
-        return $value;
+        // 3. 精确处理 "WI" 前缀：使用 substr 而非 ltrim
+        if (is_string($value_un) && str_starts_with($value_un, 'WI')) {
+            $compressedData = substr($value_un, 2); // 移除 "WI" 前缀
+            $inflatedData = @gzinflate($compressedData);
+            if ($inflatedData === false) {
+                // gzinflate 失败处理
+                return $value_un; // 返回未压缩的字符串或原始值
+            }
+            // 4. 再次反序列化，并验证
+            $result = @unserialize($inflatedData);
+            if ($result === false) {
+                return $inflatedData; // 返回解压后的字符串
+            }
+            return $result;
+        }
+        return $value_un; // 反序列化后值（可能对象、数组等）
     }
 
 
