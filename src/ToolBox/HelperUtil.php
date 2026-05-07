@@ -5,6 +5,8 @@ namespace Overfirmament\OverUtils\ToolBox;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Context;
+use Illuminate\Support\Facades\Log;
 
 class HelperUtil
 {
@@ -35,32 +37,28 @@ class HelperUtil
 
     /**
      * @param $str
-     * @param  string  $in_charset
-     * @param  string  $out_charset
+     * @param  string  $inCharset
+     * @param  string  $outCharset
      * @deprecated
      *
      * @return array|false|mixed|string|string[]|null
      */
-    public static function array_iconv($str, string $in_charset = "gbk", string $out_charset = "utf-8"): mixed
+    public static function arrayIconv($str, string $inCharset = "gbk", string $outCharset = "utf-8"): mixed
     {
         if (is_array($str)) {
             foreach ($str as $k => $v) {
-                $str[$k] = self::array_iconv($v);
+                $str[$k] = self::arrayIconv($v, $inCharset, $outCharset);
             }
             return $str;
         } else {
             if (is_string($str)) {
-                return mb_convert_encoding($str, $out_charset, $in_charset);
+                return mb_convert_encoding($str, $outCharset, $inCharset);
             } else {
                 return $str;
             }
         }
     }
 
-    public static function arrayIconv($str, $in_charset = "gbk", $out_charset = "utf-8")
-    {
-        return static::array_iconv($str, $in_charset, $out_charset);
-    }
 
     public static function isJson($string): bool
     {
@@ -706,5 +704,20 @@ class HelperUtil
                 break;
         }
         return false;
+    }
+
+
+    /**
+     * @return mixed|string
+     */
+    public static function getContextTraceId(): mixed
+    {
+        return Context::get("trace_id") ?: (Log::sharedContext()['trace_id'] ?? '');
+    }
+
+
+    public static function getContext(string $trace): mixed
+    {
+        return Context::get($trace) ?: (Log::sharedContext()[$trace] ?? '');
     }
 }
