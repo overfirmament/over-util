@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<ruleset name="over-util">
+    <description>Check that the package stays compatible with the supported PHP versions.</description>
+
+    <file>src</file>
+    <arg name="extensions" value="php"/>
+    <arg value="sp"/>
+
+    <config name="installed_paths" value="vendor/phpcompatibility/php-compatibility"/>
+    <config name="testVersion" value="8.2-"/>
+
+    <rule ref="PHPCompatibility"/>
+</ruleset>

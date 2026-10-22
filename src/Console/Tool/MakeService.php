@@ -19,6 +19,6 @@ class MakeService extends GeneratorCommand
 
     protected function getDefaultNamespace($rootNamespace): string
     {
-        return $rootNamespace . '\Services';
+        return $rootNamespace.'\Services';
     }
 }

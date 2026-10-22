@@ -2,18 +2,18 @@
 
 namespace Overfirmament\OverUtils\ToolBox;
 
-use Illuminate\Support\Facades\Redis;
 use Illuminate\Redis\Connections\Connection;
-use Illuminate\Support\Str;
+use Illuminate\Redis\Connections\PhpRedisClusterConnection;
+use Illuminate\Support\Facades\Redis;
 
 /**
  * @method keys(string $key)
  * @method get(string $key)
- * @method set(string $key, string $value)
- * @method setNx(string $key, string $value): int
+ * @method set(string $key, mixed $value)
+ * @method int setNx(string $key, mixed $value)
  * @method bool exists(string $key)
  * @method incr(string $key)
- * @method setEx(string $key, int $ttl, string $value)
+ * @method setEx(string $key, int $ttl, mixed $value)
  * @method zAdd(string $key, ...$scoreAndMember)
  * @method array zRangeByScore(string $key, int $min, int $max, array $options = [])
  * @method zRangeByScoreWithScores(string $key, int $min, int $max)
@@ -52,7 +52,6 @@ use Illuminate\Support\Str;
  * @method int lPush(string $key, mixed ...$values)
  * @method int decrBy(string $key, int $value = 1)
  * @method int decr(string $key)
- * @method array scan(int $cursor, string $pattern = "", string $key = "", int $count = null)
  * @method string rPop(string $key)
  * @method int lLen(string $key)
  */
@@ -62,29 +61,18 @@ class RedisUtil extends Redis
 
     protected Connection $redis;
 
-
-
     /**
      * 初始化
-     *
-     * @param  string  $connection
-     *
-     * @return RedisUtil
      */
     public static function init(string $connection = 'default'): RedisUtil
     {
-        return static::$instances[$connection] ??= tap(new self(), function ($redisUtil) use ($connection) {
+        return static::$instances[$connection] ??= tap(new self, function ($redisUtil) use ($connection) {
             $redisUtil->redis = Redis::connection($connection);
         });
     }
 
-
     /**
      * 注销指定连接
-     *
-     * @param  string  $connection
-     *
-     * @return void
      */
     public static function clearInstance(string $connection = 'default'): void
     {
@@ -93,58 +81,112 @@ class RedisUtil extends Redis
         }
     }
 
-
     /**
      * 返回所有连接实例
-     *
-     * @return array
      */
     public static function getInstances(): array
     {
         return static::$instances;
     }
 
-
     /**
      * 返回具体的key值
-     *
-     * @param  $patternKeys
-     *
-     * @return array
      */
     public function patternKeys(...$patternKeys): array
     {
-        $keys = $this->redis->pipeline(function ($pipe) use ($patternKeys) {
-            foreach ($patternKeys as $key) {
-                 $pipe->keys($key);
-            }
-        });
+        $keys = [];
 
-        return \Arr::collapse($keys);
+        foreach ($patternKeys as $pattern) {
+            $keys = array_merge($keys, $this->scanAll((string) $pattern));
+        }
+
+        return array_values(array_unique($keys));
     }
 
+    /**
+     * Iterate all keys matching a pattern with SCAN instead of the blocking
+     * KEYS command.
+     *
+     * @return array<int, string>
+     */
+    public function scanAll(string $pattern = '*', int $count = 1000): array
+    {
+        $cursor = 0;
+        $keys = [];
+
+        do {
+            $result = $this->scan($cursor, $pattern, $count);
+
+            if ($result === false) {
+                break;
+            }
+
+            [$cursor, $batch] = $result;
+
+            if (is_array($batch)) {
+                $keys = array_merge($keys, $batch);
+            }
+        } while ((int) $cursor !== 0);
+
+        return $keys;
+    }
 
     /**
-     * @param $key
-     *
-     * @return int
+     * @return array{0: int, 1: array<int, string>}|false
      */
+    public function scan(int $cursor = 0, string $pattern = '*', int $count = 1000): array|false
+    {
+        $client = $this->redis->client();
+
+        if ($client instanceof \Redis) {
+            $keys = $client->scan($cursor, $pattern, $count);
+
+            if ($keys === false) {
+                return false;
+            }
+
+            return [$cursor, $keys];
+        }
+
+        // Laravel's cluster connection implements scan() with an options array.
+        if ($this->redis instanceof PhpRedisClusterConnection) {
+            return $this->redis->scan($cursor, [
+                'match' => $pattern,
+                'count' => $count,
+            ]);
+        }
+
+        // Predis accepts an options array. Use a dynamic call because the
+        // abstract connection only exposes the phpredis mixin signature.
+        if (is_object($client) && method_exists($client, 'scan')) {
+            $scan = \Closure::fromCallable([$client, 'scan']);
+            $result = $scan($cursor, [
+                'match' => $pattern,
+                'count' => $count,
+            ]);
+
+            return is_array($result) ? $result : false;
+        }
+
+        return false;
+    }
+
     public function del($key): int
     {
         if (filled($key)) {
-            return $this->redis->del($key);
-        } else {
-            return 0;
+            return (int) $this->redis->del($key);
         }
-    }
 
+        return 0;
+    }
 
     public function __call($name, $arguments)
     {
-        if (\Str::endsWith($name, "WithScores")) {
-            $name = \Str::before($name, "WithScores");
+        if (\Str::endsWith($name, 'WithScores')) {
+            $name = \Str::before($name, 'WithScores');
             $arguments[] = ['WITHSCORES' => true];
         }
+
         return $this->redis->$name(...$arguments);
     }
 }

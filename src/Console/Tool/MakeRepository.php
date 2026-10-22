@@ -22,7 +22,6 @@ class MakeRepository extends GeneratorCommand
 
     protected $type = 'Repository';
 
-
     /**
      * Get the stub file for the generator.
      *
@@ -41,6 +40,6 @@ class MakeRepository extends GeneratorCommand
      */
     protected function getDefaultNamespace($rootNamespace)
     {
-        return $rootNamespace. '\Repositories';
+        return $rootNamespace.'\Repositories';
     }
 }

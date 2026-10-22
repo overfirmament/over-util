@@ -3,242 +3,239 @@
 namespace Overfirmament\OverUtils\ToolBox;
 
 use Exception;
-use PhpAmqpLib\Connection\AMQPStreamConnection;
-use PhpAmqpLib\Channel\AbstractChannel;
+use Illuminate\Support\Facades\Log;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Message\AMQPMessage;
 use Throwable;
 
+/**
+ * @phpstan-consistent-constructor
+ */
 class RabbitMqUtil
 {
-    protected static $instance = [];
+    protected string $configName;
 
-    protected AMQPMessage $msg;
-    protected AMQPStreamConnection $connection;
-    protected string $queueName;
-    protected string $exchangeName;
+    protected ?AMQPChannel $channel = null;
 
-    protected AbstractChannel|AMQPChannel $channel;
+    protected ?AMQPMessage $msg = null;
+
+    protected ?string $queueName = null;
+
+    protected ?string $exchangeName = null;
+
     protected bool $isAck = true;
 
+    protected bool $confirmSelected = false;
+
+    /** @var array<string, mixed> */
     protected array $config;
 
     protected string $uuid;
 
-    protected string $routingKey = "";
-
+    protected string $routingKey = '';
 
     /**
-     * @param  string  $configName
+     * Returns a lightweight producer/consumer object. AMQP connections are
+     * cached by RabbitMqConnectionManager, so creating this object in a loop is
+     * safe and does not reconnect for every message.
      *
-     * @return static
      * @throws Exception
      */
-    public static function getInstance(string $configName = "default"): static
+    public static function getInstance(string $configName = 'default'): static
     {
-//        if (!isset(static::$instance[$configName])) {
-//            static::$instance[$configName] = new static($configName);
-//        }
-
         return new static($configName);
     }
 
-
     /**
-     * @param  string  $configName
-     *
      * @throws Exception
      */
     protected function __construct(string $configName)
     {
-        $this->config = config("rabbitmq.connections.{$configName}");
-        if (empty($this->config)){
+        $this->configName = $configName;
+        $this->config = (array) config("rabbitmq.connections.{$configName}");
+
+        if ($this->config === []) {
             throw new Exception("rabbitmq配置{$configName}不存在");
         }
 
-        $this->uuid = str_replace("-", "", \Str::uuid()->toString());
-        \Log::channel("rabbit_mq")->info("mqTool初始化 {$this->uuid}，使用配置rabbitmq.connections.{$configName}", $this->config);
-
-        $host = $this->config["host"] ?? "127.0.0.1";
-        $port = $this->config["port"] ?? 5672;
-        $user = $this->config["username"] ?? "guest";
-        $pwd  = $this->config["password"] ?? "guest";
-
-        $this->connection = new AMQPStreamConnection($host, $port, $user, $pwd);
-        $this->channel = $this->connection->channel();
+        $this->uuid = str_replace('-', '', (string) \Str::uuid());
+        $this->log('info', "mqTool初始化 {$this->uuid}，使用配置rabbitmq.connections.{$configName}", [
+            'config' => $this->safeConfig(),
+        ]);
     }
 
-
-    /**
-     * @param  string  $routingKey
-     *
-     * @return RabbitMqUtil
-     */
     public function setRoutingKey(string $routingKey): static
     {
         $this->routingKey = $routingKey;
 
         return $this;
     }
-    
-    
+
     /**
      * @throws Exception
      */
     public function autoBuild(): static
     {
-        $this->exchange();
-        $this->queue();
-        $this->bind();
+        try {
+            $this->exchange();
+            $this->queue();
+            $this->bind();
+        } catch (Throwable $e) {
+            $this->closeChannel();
+
+            throw $e;
+        }
 
         return $this;
     }
 
-
     /**
-     *|------------------------------------------------------------------------
-     *|创建交换机
-     *|------------------------------------------------------------------------
-     *|@doc   string      $exchange       交换机名称
-     *|@doc   string      $type           交换机类型
-     *|@doc   bool        $passive        false 如果交换机不存在,则会抛出一个错误的异常 true 如果你希望查询交换机是否存在．而又不想在查询时创建这个交换机
-     *|@doc   bool        $durable        表示了如果MQ服务器重启,这个交换机是否要重新建立 true 是 false 否
-     *|@doc   bool        $auto_delete    如果绑定的所有队列都不在使用了.是否自动删除这个交换机
-     *|@doc   bool        $internal       内部交换机.即不允许使用客户端推送消息.MQ内部可以让交换机作为一个队列绑定到另外一个交换机下
-     *|@doc   bool        $nowait         如果为True则表示不等待服务器回执信息.函数将返回NULL,可以提高访问速度..应用范围不确定
-     *|@doc   null        $arguments      额外的一些参数
-     *|@doc   null        $ticket         未知
-     *|------------------------------------------------------------------------
-     * @return  $this
+     * @throws Exception
      */
     public function exchange(): static
     {
-        $exchange = $this->config["exchange"];
-        $this->exchangeName = $exchange["name"];
-        $this->channel->exchange_declare(
-            $exchange["name"],
-            $exchange["type"],
-            $exchange["passive"] ?? false,
-            $exchange["durable"] ?? false,
-            $exchange["auto_delete"] ?? false,
-            $exchange["internal"] ?? false,
-            $exchange["nowait"] ?? false,
-            $exchange["arguments"] ?? null,
-            $exchange["ticket"] ?? null
+        $exchange = (array) ($this->config['exchange'] ?? []);
+
+        if (($exchange['name'] ?? '') === '') {
+            throw new Exception('exchange 配置缺失：rabbitmq.exchange.name');
+        }
+
+        $this->exchangeName = (string) $exchange['name'];
+
+        $this->channel()->exchange_declare(
+            $this->exchangeName,
+            (string) ($exchange['type'] ?? 'direct'),
+            (bool) ($exchange['passive'] ?? false),
+            (bool) ($exchange['durable'] ?? false),
+            (bool) ($exchange['auto_delete'] ?? false),
+            (bool) ($exchange['internal'] ?? false),
+            (bool) ($exchange['nowait'] ?? false),
+            $exchange['arguments'] ?? null,
+            $exchange['ticket'] ?? null
         );
-        \Log::channel("rabbit_mq")->info("exchange构建完成 {$this->uuid}");
+
+        $this->log('info', "exchange构建完成 {$this->uuid}");
 
         return $this;
     }
 
+    /**
+     * @throws Exception
+     */
+    public function queue(): static
+    {
+        $queue = (array) ($this->config['queue'] ?? []);
+
+        if (($queue['name'] ?? '') === '') {
+            throw new Exception('queue 配置缺失：rabbitmq.queue.name');
+        }
+
+        $this->queueName = (string) $queue['name'];
+
+        $this->channel()->queue_declare(
+            $this->queueName,
+            (bool) ($queue['passive'] ?? false),
+            (bool) ($queue['durable'] ?? false),
+            (bool) ($queue['exclusive'] ?? false),
+            (bool) ($queue['auto_delete'] ?? true),
+            (bool) ($queue['nowait'] ?? false),
+            $queue['arguments'] ?? null,
+            $queue['ticket'] ?? null
+        );
+
+        $this->log('info', "queue构建完成 {$this->uuid}");
+
+        return $this;
+    }
 
     /**
      * @throws Exception
      */
     public function bind(): static
     {
-        if (!$this->queueName || !$this->exchangeName) {
-            throw new Exception("绑定失败：交换机名和队列名缺失");
+        if ($this->queueName === null || $this->exchangeName === null) {
+            throw new Exception('绑定失败：请先调用 exchange() 和 queue()，或直接使用 autoBuild()');
         }
 
-        $this->channel->queue_bind($this->queueName, $this->exchangeName, $this->routingKey ?:$this->config["routing_key"]);
-        \Log::channel("rabbit_mq")->info("bind构建完成 {$this->uuid}");
+        $routingKey = $this->routingKey !== ''
+            ? $this->routingKey
+            : (string) ($this->config['routing_key'] ?? '');
+
+        $this->channel()->queue_bind($this->queueName, $this->exchangeName, $routingKey);
+        $this->log('info', "bind构建完成 {$this->uuid}");
 
         return $this;
     }
 
     /**
-     *|------------------------------------------------------------------------
-     *|创建队列
-     *|------------------------------------------------------------------------
-     *|$queue：指定要声明的队列的名称。如果未指定，则服务器将为队列生成一个随机名称。默认值为 ""。
-     *|$passive：如果设置为 true，那么声明一个已存在的队列。如果队列不存在，则会抛出一个 AMQPChannelException 异常。默认为 false。
-     *|$durable：如果设置为 true，则在服务器重启时也会保留该队列。默认为 false。
-     *|$exclusive：如果设置为 true，则该队列将只能由声明它的连接使用。默认为 false。
-     *|$auto_delete：如果设置为 true，则在最后一个消费者取消订阅时，该队列将被自动删除。默认为 true。
-     *|$nowait：如果设置为 true，则不等待服务器的响应。默认为 false。
-     *|$arguments：指定用于声明队列的其他参数。默认为 null。
-     *|$ticket：指定用于访问队列的权限令牌。默认为 null。
-     *|注意，如果 $passive 设置为 true，则 $durable 和 $auto_delete 参数的值将被忽略。
-     *|------------------------------------------------------------------------
-     * @return  $this
-     */
-    public function queue(): static
-    {
-        $queue = $this->config["queue"];
-        $this->queueName = $queue["name"];
-        $this->channel->queue_declare(
-            $queue["name"] ?? "",
-            $queue["passive"] ?? false,
-            $queue["durable"] ?? false,
-            $queue["exclusive"] ?? false,
-            $queue["auto_delete"] ?? true,
-            $queue["nowait"] ?? false,
-            $queue["arguments"] ?? null,
-            $queue["ticket"] ?? null
-        );
-        \Log::channel("rabbit_mq")->info("queue构建完成 {$this->uuid}");
-
-        return $this;
-    }
-
-
-    /**
-     * 设置 MQ 的消息
-     *
-     * @param  string  $string
-     * @param  array  $properties
-     *
-     * @return $this
+     * @param  array<string, mixed>  $properties
      */
     public function message(string $string, array $properties = []): static
     {
-        $msgConf = $this->config["message"];
-        $properties = array_merge($msgConf["properties"] ?? [], $properties);
+        $messageConfig = (array) ($this->config['message'] ?? []);
+        $properties = array_merge((array) ($messageConfig['properties'] ?? []), $properties);
 
         $this->msg = new AMQPMessage($string, $properties);
-        \Log::channel("rabbit_mq")->info("message构建完成 {$this->uuid}");
+        $this->log('info', "message构建完成 {$this->uuid}");
 
         return $this;
     }
 
-
     /**
-     * 发布
-     *
-     * @return void
      * @throws Throwable
      */
     public function publish(): void
     {
-        $this->channel->confirm_select();
-        $this->channel->set_ack_handler(
-            function (AMQPMessage $message) {
-                \Log::channel("rabbit_mq")->info("msg.ack {$this->uuid} ".$message->body);
-            }
-        );
-        $this->channel->set_nack_handler(
-            function (AMQPMessage $message) {
-                \Log::channel("rabbit_mq")->info("msg.nack {$this->uuid} ".$message->body);
-            }
-        );
-
-        $publish = $this->config["publish"];
-        $this->channel->basic_publish($this->msg,
-            $this->exchangeName,
-            $this->routingKey ?: $this->config["routing_key"],
-            $publish["mandatory"] ?? false,
-            $publish["immediate"] ?? false,
-            $publish["ticket"] ?? null
-        );
-
-        if($this->isAck){
-            $this->channel->wait_for_pending_acks();
+        if (! $this->msg instanceof AMQPMessage) {
+            throw new Exception('发布失败：请先调用 message() 设置消息内容');
         }
 
-        $this->close();
-    }
+        $publish = (array) ($this->config['publish'] ?? []);
+        $channel = $this->channel();
+        $nacked = false;
 
+        try {
+            if ($this->isAck) {
+                $this->enableConfirmMode($channel);
+                $channel->set_ack_handler(function (AMQPMessage $message): void {
+                    $this->log('info', "msg.ack {$this->uuid} ".$message->body);
+                });
+                $channel->set_nack_handler(function (AMQPMessage $message) use (&$nacked): void {
+                    $nacked = true;
+                    $this->log('error', "msg.nack {$this->uuid} ".$message->body);
+                });
+            }
+
+            $routingKey = $this->routingKey !== ''
+                ? $this->routingKey
+                : (string) ($this->config['routing_key'] ?? '');
+
+            $channel->basic_publish(
+                $this->msg,
+                $this->exchangeName ?? '',
+                $routingKey,
+                (bool) ($publish['mandatory'] ?? false),
+                (bool) ($publish['immediate'] ?? false),
+                $publish['ticket'] ?? null
+            );
+
+            if ($this->isAck) {
+                $channel->wait_for_pending_acks((float) ($publish['confirm_timeout'] ?? 5.0));
+            }
+
+            if ($nacked) {
+                throw new Exception('RabbitMQ 返回 nack，消息未被 broker 确认');
+            }
+
+            $this->log('info', "msg.publish {$this->uuid}");
+        } finally {
+            $this->closeChannel();
+
+            if (($publish['close_connection_after_publish'] ?? false) === true) {
+                app(RabbitMqConnectionManager::class)->disconnect($this->configName);
+            }
+        }
+    }
 
     public function isAck(bool $isAck): static
     {
@@ -247,65 +244,130 @@ class RabbitMqUtil
         return $this;
     }
 
-
     /**
-     * @return void
-     * @throws Throwable
+     * Closes the channel only. The underlying connection stays in the manager
+     * cache for reuse by the next message.
      */
     public function close(): void
     {
-        try {
-            $this->channel->close();
-            $this->connection->close();
-            \Log::channel("rabbit_mq")->info("mqTool关闭 {$this->uuid}");
-        } catch (Throwable $e) {
-            \Log::channel("rabbit_mq")->error("mqTool关闭失败 {$this->uuid}", [
-                "error" => $e->getMessage(),
-                "line" => $e->getLine(),
-                "trace" => $e->getTrace(),
-                "config" => HelperUtil::autoJsonEncode($this->config)
-            ]);
-            throw new $e;
-        }
+        $this->closeChannel();
+        $this->log('info', "mqTool关闭channel {$this->uuid}");
     }
 
+    /**
+     * Explicitly closes the shared connection for this config name.
+     */
+    public function closeConnection(): void
+    {
+        $this->closeChannel();
+        app(RabbitMqConnectionManager::class)->disconnect($this->configName);
+        $this->log('info', "mqTool关闭connection {$this->uuid}");
+    }
 
     /**
-     * @param  callable  $callback
-     *
-     * @return void
      * @throws Throwable
      */
     public function consume(callable $callback): void
     {
-        $consumer = $this->config["consumer"] ?? [];
-
-        $this->channel->basic_consume(
-            $this->queueName,
-            $consumer['tag'] ?? '',
-            $consumer['no_local'] ?? false,
-            $consumer['no_ack'] ?? false,
-            $consumer['exclusive'] ?? false,
-            $consumer['nowait'] ?? false,
-            $callback,
-            $consumer['ticket'] ?? null,
-            $consumer['arguments'] ?? []
-        );
-
-        while ($this->channel->is_consuming()) {
-            $this->channel->wait();
+        if ($this->queueName === null) {
+            throw new Exception('消费失败：请先调用 queue() 或 autoBuild()');
         }
 
-        $this->close();
+        $consumer = (array) ($this->config['consumer'] ?? []);
+        $channel = $this->channel();
+
+        try {
+            $channel->basic_consume(
+                $this->queueName,
+                (string) ($consumer['tag'] ?? ''),
+                (bool) ($consumer['no_local'] ?? false),
+                (bool) ($consumer['no_ack'] ?? false),
+                (bool) ($consumer['exclusive'] ?? false),
+                (bool) ($consumer['nowait'] ?? false),
+                $callback,
+                $consumer['ticket'] ?? null,
+                $consumer['arguments'] ?? []
+            );
+
+            while ($channel->is_consuming()) {
+                $channel->wait();
+            }
+        } finally {
+            $this->closeChannel();
+        }
     }
 
+    /**
+     * @throws Exception
+     */
+    private function channel(): AMQPChannel
+    {
+        if ($this->channel instanceof AMQPChannel && $this->channel->is_open()) {
+            return $this->channel;
+        }
 
-//    /**
-//     * @throws Exception|\Throwable
-//     */
-//    public function __destruct()
-//    {
-//
-//    }
+        $this->channel = app(RabbitMqConnectionManager::class)
+            ->channel($this->configName, $this->config);
+        $this->confirmSelected = false;
 
+        return $this->channel;
+    }
+
+    private function enableConfirmMode(AMQPChannel $channel): void
+    {
+        if ($this->confirmSelected) {
+            return;
+        }
+
+        $channel->confirm_select();
+        $this->confirmSelected = true;
+    }
+
+    private function closeChannel(): void
+    {
+        if (! $this->channel instanceof AMQPChannel) {
+            return;
+        }
+
+        try {
+            if ($this->channel->is_open()) {
+                $this->channel->close();
+            }
+        } catch (Throwable $e) {
+            $this->log('warning', "mqTool关闭channel失败 {$this->uuid}", [
+                'error' => $e->getMessage(),
+            ]);
+        } finally {
+            $this->channel = null;
+            $this->confirmSelected = false;
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    private function log(string $level, string $message, array $context = []): void
+    {
+        try {
+            Log::channel('rabbit_mq')->log($level, $message, $context);
+        } catch (Throwable) {
+            try {
+                Log::log($level, $message, $context);
+            } catch (Throwable) {
+                // Logging must never break publishing.
+            }
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function safeConfig(): array
+    {
+        $config = $this->config;
+
+        unset($config['password'], $config['login_response']);
+
+        return $config;
+    }
 }

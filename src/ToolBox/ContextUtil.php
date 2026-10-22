@@ -2,14 +2,15 @@
 
 namespace Overfirmament\OverUtils\ToolBox;
 
-use Dcat\Admin\Support\Helper;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Fluent;
 use Illuminate\Support\HigherOrderTapProxy;
 
 /**
  * 该工具类仅用于上下文注入
- * @package App\Utils
+ *
+ *
+ * @phpstan-consistent-constructor
  */
 class ContextUtil extends Fluent
 {
@@ -18,19 +19,21 @@ class ContextUtil extends Fluent
      */
     protected static ?ContextUtil $context = null;
 
-    /**
-     * @return static
-     */
     public static function getInstance(): static
     {
-        return static::$context ??= new static();
+        return static::$context ??= new static;
     }
 
+    /**
+     * Drop the singleton so long-running workers do not leak context between
+     * jobs/requests.
+     */
+    public static function reset(): void
+    {
+        static::$context = null;
+    }
 
     /**
-     * @param $key
-     * @param $value
-     *
      * @return $this
      */
     public function set($key, $value = null): static
@@ -45,9 +48,6 @@ class ContextUtil extends Fluent
     }
 
     /**
-     * @param $key
-     * @param $default
-     *
      * @return array|\ArrayAccess|mixed
      */
     public function get($key, $default = null): mixed
@@ -56,9 +56,6 @@ class ContextUtil extends Fluent
     }
 
     /**
-     * @param $key
-     * @param  \Closure  $callback
-     *
      * @return array|\ArrayAccess|HigherOrderTapProxy|mixed|null
      */
     public function remember($key, \Closure $callback): mixed
@@ -72,23 +69,12 @@ class ContextUtil extends Fluent
         });
     }
 
-    /**
-     * @param $key
-     * @param $default
-     *
-     * @return array
-     */
     public function getArray($key, $default = null): array
     {
         return HelperUtil::array($this->get($key, $default), false);
     }
 
-
     /**
-     * @param $key
-     * @param $value
-     * @param $k
-     *
      * @return $this|ContextUtil
      */
     public function add($key, $value, $k = null): ContextUtil|static
@@ -105,9 +91,6 @@ class ContextUtil extends Fluent
     }
 
     /**
-     * @param $key
-     * @param  array  $value
-     *
      * @return $this|ContextUtil
      */
     public function merge($key, array $value): ContextUtil|static
@@ -117,19 +100,11 @@ class ContextUtil extends Fluent
         return $this->set($key, array_merge($results, $value));
     }
 
-    /**
-     * @param $keys
-     *
-     * @return void
-     */
     public function forget($keys): void
     {
         Arr::forget($this->attributes, $keys);
     }
 
-    /**
-     * @return void
-     */
     public function flush(): void
     {
         $this->attributes = [];

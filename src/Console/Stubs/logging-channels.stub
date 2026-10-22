@@ -1,0 +1,24 @@
+// @channel http_out
+'http_out' => [
+    'driver' => 'daily',
+    'path' => storage_path('logs/http/out_info.log'),
+    'level' => env('LOG_LEVEL', 'debug'),
+    'days' => 14,
+    'formatter' => \Overfirmament\OverUtils\Logger\LogFormatter::class,
+],
+// @channel http_in
+'http_in' => [
+    'driver' => 'daily',
+    'path' => storage_path('logs/http/in_info.log'),
+    'level' => env('LOG_LEVEL', 'debug'),
+    'days' => 14,
+    'formatter' => \Overfirmament\OverUtils\Logger\LogFormatter::class,
+],
+// @channel rabbit_mq
+'rabbit_mq' => [
+    'driver' => 'daily',
+    'path' => storage_path('logs/rabbit/debug.log'),
+    'level' => env('LOG_LEVEL', 'debug'),
+    'days' => 14,
+    'formatter' => \Overfirmament\OverUtils\Logger\LogFormatter::class,
+],

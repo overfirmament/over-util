@@ -26,23 +26,22 @@ class AutoGenerate extends Command
      */
     public function handle()
     {
-        $model = $this->argument("modelName");
+        $model = $this->argument('modelName');
         $options = $this->options();
 
-        $this->call("make:model", [
-            "name" => $model
+        $this->call('make:model', [
+            'name' => $model,
         ]);
 
-
-        if ($options["repository"]) {
-            $this->call("make:repository", [
-                "name" => $model . "Repository"
+        if ($options['repository']) {
+            $this->call('make:repository', [
+                'name' => $model.'Repository',
             ]);
         }
-        if ($options["service"]) {
-            $service = Str::afterLast($model, "/");
-            $this->call("make:service", [
-                "name" => $service . "Service"
+        if ($options['service']) {
+            $service = Str::afterLast($model, '/');
+            $this->call('make:service', [
+                'name' => $service.'Service',
             ]);
         }
     }

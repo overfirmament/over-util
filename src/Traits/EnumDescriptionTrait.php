@@ -4,9 +4,6 @@ namespace Overfirmament\OverUtils\Traits;
 
 trait EnumDescriptionTrait
 {
-    /**
-     * @return array
-     */
     public static function asSelectArray(): array
     {
         $data = [];
@@ -17,7 +14,7 @@ trait EnumDescriptionTrait
         return $data;
     }
 
-    public static function sqlComment(string $pre = ""): string
+    public static function sqlComment(string $pre = ''): string
     {
         $selectArray = self::asSelectArray();
         $commentArray = [];
@@ -25,6 +22,6 @@ trait EnumDescriptionTrait
             $commentArray[] = "{$k}-{$v}";
         }
 
-        return "{$pre}：" . implode("|", $commentArray);
+        return "{$pre}：".implode('|', $commentArray);
     }
 }

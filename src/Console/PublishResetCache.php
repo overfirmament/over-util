@@ -3,34 +3,34 @@
 namespace Overfirmament\OverUtils\Console;
 
 use Illuminate\Console\Command;
+use Spatie\LaravelData\Data;
 
 class PublishResetCache extends Command
 {
     /**
-     * The name and signature of the console command.
-     *
      * @var string
      */
-    protected $signature = 'publish:cache';
+    protected $signature = 'overutil:cache-reset';
 
     /**
-     * The console command description.
-     *
+     * @var array<int, string>
+     */
+    protected $aliases = ['publish:cache'];
+
+    /**
      * @var string
      */
     protected $description = '理论上每次发布代码后都要跑这个命令，用于重置各类缓存';
 
-    /**
-     * Execute the console command.
-     */
-    public function handle()
+    public function handle(): int
     {
-        // 重置路由缓存
-        $this->call("route:clear");
-        $this->call("route:cache");
-        // 添加 laravel-data 缓存
-        if (class_exists("Spatie\\LaravelData\\Data")) {
-            $this->call("data:cache-structures");
+        $this->call('route:clear');
+        $this->call('route:cache');
+
+        if (class_exists(Data::class)) {
+            $this->call('data:cache-structures');
         }
+
+        return self::SUCCESS;
     }
 }

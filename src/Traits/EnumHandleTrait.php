@@ -4,9 +4,6 @@ namespace Overfirmament\OverUtils\Traits;
 
 trait EnumHandleTrait
 {
-    /**
-     * @return array
-     */
     public static function values(): array
     {
         $data = [];
@@ -19,7 +16,6 @@ trait EnumHandleTrait
         return $data;
     }
 
-
     public function is(mixed $value): bool
     {
         // 如果传入的值是枚举类的值，直接比较 value；传入的是枚举类的实例，则比较实例
@@ -30,12 +26,6 @@ trait EnumHandleTrait
         return $this->value === $value;
     }
 
-
-    /**
-     * @param $value
-     *
-     * @return bool
-     */
     public static function isBelong($value): bool
     {
         return (bool) self::tryFrom($value);
