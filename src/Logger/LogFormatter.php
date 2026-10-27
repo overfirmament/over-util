@@ -2,6 +2,7 @@
 
 namespace Overfirmament\OverUtils\Logger;
 
+use Illuminate\Support\Str;
 use Monolog\Formatter\JsonFormatter;
 use Monolog\LogRecord;
 use Overfirmament\OverUtils\ToolBox\HelperUtil;
@@ -9,6 +10,8 @@ use Throwable;
 
 class LogFormatter extends JsonFormatter
 {
+    protected string $trackField = 'traceId';
+
     public function __construct()
     {
         parent::__construct();
@@ -19,6 +22,8 @@ class LogFormatter extends JsonFormatter
 
     public function format(LogRecord $record): string
     {
+        $snakeCaseTrackField = Str::snake($this->trackField);
+
         $record = $this->normalizeRecord($record);
         $record = $this->autoConvert2Utf8($record);
 
@@ -26,10 +31,10 @@ class LogFormatter extends JsonFormatter
 
         if ($traceId === '') {
             $traceId = (string) (
-                data_get($record, ['context', 'trace_id'])
-                ?? data_get($record, ['context', 'traceId'])
-                ?? data_get($record, ['extra', 'trace_id'])
-                ?? data_get($record, ['extra', 'traceId'])
+                data_get($record, ['context', $this->trackField])
+                ?? data_get($record, ['context', $snakeCaseTrackField])
+                ?? data_get($record, ['extra', $this->trackField])
+                ?? data_get($record, ['extra', $snakeCaseTrackField])
                 ?? ''
             );
         }
@@ -42,11 +47,11 @@ class LogFormatter extends JsonFormatter
             $record = array_merge(['trace_id' => $traceId], $record);
 
             if (isset($record['context']) && is_array($record['context'])) {
-                unset($record['context']['traceId'], $record['context']['trace_id']);
+                unset($record['context'][$this->trackField], $record['context'][$snakeCaseTrackField]);
             }
 
             if (isset($record['extra']) && is_array($record['extra'])) {
-                unset($record['extra']['traceId'], $record['extra']['trace_id']);
+                unset($record['extra'][$this->trackField], $record['extra'][$snakeCaseTrackField]);
             }
         }
 
