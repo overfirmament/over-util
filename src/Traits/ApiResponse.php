@@ -7,6 +7,7 @@ use DateTimeInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Overfirmament\OverUtils\Support\TokenExpiration;
+use Overfirmament\OverUtils\Support\TraceContext;
 use Overfirmament\OverUtils\ToolBox\HelperUtil;
 use Spatie\LaravelData\Data;
 use Symfony\Component\HttpFoundation\Response as FoundationResponse;
@@ -88,7 +89,7 @@ trait ApiResponse
             $traceId = (string) HelperUtil::getContextTraceId();
 
             if ($traceId !== '') {
-                $data['trace_id'] = $traceId;
+                $data[TraceContext::output()] = $traceId;
             }
         }
 

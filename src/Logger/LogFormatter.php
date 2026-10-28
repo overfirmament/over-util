@@ -2,56 +2,72 @@
 
 namespace Overfirmament\OverUtils\Logger;
 
-use Illuminate\Support\Str;
 use Monolog\Formatter\JsonFormatter;
 use Monolog\LogRecord;
-use Overfirmament\OverUtils\ToolBox\HelperUtil;
-use Throwable;
+use Overfirmament\OverUtils\Support\TraceContext;
 
 class LogFormatter extends JsonFormatter
 {
-    protected string $trackField = 'traceId';
+    protected string $trackField = TraceContext::DEFAULT_FIELD;
+
+    protected string $outputField = TraceContext::DEFAULT_OUTPUT;
 
     public function __construct()
     {
         parent::__construct();
 
+        $this->trackField = TraceContext::field();
+        $this->outputField = TraceContext::output();
+
         $this->setDateFormat('Y-m-d H:i:s');
         $this->addJsonEncodeOption(JSON_INVALID_UTF8_SUBSTITUTE);
     }
 
+    /**
+     * Override the field read from the log context/extra.
+     *
+     * @return $this
+     */
+    public function setTrackField(string $field): static
+    {
+        $this->trackField = $field;
+
+        return $this;
+    }
+
+    /**
+     * Override the field emitted at the top level of the log line.
+     *
+     * @return $this
+     */
+    public function setOutputField(string $field): static
+    {
+        $this->outputField = $field;
+
+        return $this;
+    }
+
     public function format(LogRecord $record): string
     {
-        $snakeCaseTrackField = Str::snake($this->trackField);
-
         $record = $this->normalizeRecord($record);
         $record = $this->autoConvert2Utf8($record);
 
-        $traceId = (string) HelperUtil::getContextTraceId();
+        $context = isset($record['context']) && is_array($record['context']) ? $record['context'] : [];
+        $extra = isset($record['extra']) && is_array($record['extra']) ? $record['extra'] : [];
 
-        if ($traceId === '') {
-            $traceId = (string) (
-                data_get($record, ['context', $this->trackField])
-                ?? data_get($record, ['context', $snakeCaseTrackField])
-                ?? data_get($record, ['extra', $this->trackField])
-                ?? data_get($record, ['extra', $snakeCaseTrackField])
-                ?? ''
-            );
-        }
-
-        if ($traceId === '') {
-            $traceId = $this->requestTraceId();
-        }
+        $traceId = TraceContext::resolve($context, $extra, $this->trackField);
 
         if ($traceId !== '') {
-            $record = array_merge(['trace_id' => $traceId], $record);
+            $record = array_merge([$this->outputField => $traceId], $record);
 
-            if (isset($record['context']) && is_array($record['context'])) {
-                unset($record['context'][$this->trackField], $record['context'][$snakeCaseTrackField]);
-            }
+            foreach (TraceContext::candidates($this->trackField) as $key) {
+                if (isset($record['context']) && is_array($record['context'])) {
+                    unset($record['context'][$key]);
+                }
 
-            if (isset($record['extra']) && is_array($record['extra'])) {
-                unset($record['extra'][$this->trackField], $record['extra'][$snakeCaseTrackField]);
+                if (isset($record['extra']) && is_array($record['extra'])) {
+                    unset($record['extra'][$key]);
+                }
             }
         }
 
@@ -91,18 +107,5 @@ class LogFormatter extends JsonFormatter
         }
 
         return $data;
-    }
-
-    private function requestTraceId(): string
-    {
-        try {
-            if (app()->runningInConsole()) {
-                return '';
-            }
-
-            return (string) (request()->trace_id ?? request()->traceId ?? '');
-        } catch (Throwable) {
-            return '';
-        }
     }
 }

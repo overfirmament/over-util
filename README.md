@@ -36,6 +36,8 @@ php artisan overutil:install --dry-run
 
 修改前会在 `config/logging.php` 旁生成 `logging.php.overutil.bak` 备份。向 `AppServiceProvider.php` 注入内容前也会生成 `AppServiceProvider.php.overutil.bak` 备份。
 
+日志 channel 的定义位于包内部的 `config/logchannel.php`，该文件不会发布到应用：安装命令只把它们写入 `config/logging.php`。即使没有执行安装命令，ServiceProvider 也会在运行时补充缺失的 channel。
+
 ## Horizon / 常驻 worker
 
 安装命令会在 `app/Providers/AppServiceProvider.php` 的 `boot()` 中注入一段默认注释的示例代码：
@@ -84,7 +86,41 @@ php artisan overutil:install --dry-run
 ],
 ```
 
-即使没有执行安装命令，ServiceProvider 也会在运行时补充缺失的 channel。`LogFormatter` 会自动把 `trace_id` 提到 JSON 顶层，并对 GBK 字符串做 UTF-8 转换，避免日志写入失败。
+`LogFormatter` 会自动把追踪字段提到 JSON 顶层，并对 GBK 字符串做 UTF-8 转换，避免日志写入失败。
+
+## 追踪字段
+
+追踪字段统一由 `Overfirmament\OverUtils\Support\TraceContext` 解析，`LogFormatter`、`HelperUtil::getContextTraceId()`、`ApiResponse`、`AlarmUtil` 都通过它读取，不再各自硬编码 `trace_id`。
+
+在 `config/overutil.php`（或 `.env`）中配置：
+
+```php
+'trace' => [
+    // 中间件/业务代码写入的字段，如 request_id、requestId
+    'field'  => env('OVERUTIL_TRACE_FIELD', 'trace_id'),
+    // 日志与 API 响应中输出的字段
+    'output' => env('OVERUTIL_TRACE_OUTPUT', 'trace_id'),
+],
+```
+
+例如项目使用 `$request->merge(['request_id' => $uuid])`，只需把 `field` 配成 `request_id`，日志即可取到追踪号。
+
+取值顺序（单条日志优先）：
+
+1. 单条日志的 `context`
+2. 单条日志的 `extra`
+3. Laravel `Context`
+4. `Log::sharedContext()`
+5. 当前请求的 input / 路由参数（非 console 环境）
+
+候选键始终是联合的：配置字段、它的 snake_case/camelCase 变体，以及兼容保留的 `trace_id` / `traceId`。因此切换配置不会影响历史日志的解析。
+
+自定义 formatter 时可覆盖字段：
+
+```php
+$formatter = new \Overfirmament\OverUtils\Logger\LogFormatter;
+$formatter->setTrackField('requestId')->setOutputField('request_id');
+```
 
 ## API 响应
 

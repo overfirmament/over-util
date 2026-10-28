@@ -5,6 +5,7 @@ namespace Overfirmament\OverUtils\ToolBox;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Support\Str;
+use Overfirmament\OverUtils\Support\TraceContext;
 use Psr\Http\Message\ResponseInterface;
 
 /**
@@ -54,6 +55,7 @@ class AlarmUtil
         $instance->key = (string) ($config['key'] ?? '');
         $instance->connection = (string) ($config['connection'] ?? 'default');
         $instance->prefix = Str::slug((string) config('app.name'));
+        $instance->traceId = TraceContext::resolve();
 
         return $instance;
     }

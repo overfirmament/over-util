@@ -132,6 +132,8 @@ class InstallCommand extends Command
     {
         $sourceDirectory = dirname(__DIR__, 2).'/config';
 
+        // logchannel.php is package-internal and deliberately left out: its
+        // channels are written into the application's config/logging.php.
         foreach (['overutil.php', 'alarm.php', 'rabbitmq.php'] as $file) {
             $source = $sourceDirectory.'/'.$file;
             $target = config_path($file);

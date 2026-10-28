@@ -26,6 +26,7 @@ class OverUtilServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__.'/../config/overutil.php', 'overutil');
+        $this->mergeConfigFrom(__DIR__.'/../config/logchannel.php', 'logchannel');
         $this->mergeConfigFrom(__DIR__.'/../config/alarm.php', 'alarm');
         $this->mergeConfigFrom(__DIR__.'/../config/rabbitmq.php', 'rabbitmq');
 
@@ -55,11 +56,12 @@ class OverUtilServiceProvider extends ServiceProvider
 
     /**
      * Make the package log channels available even when the install command was
-     * not executed or the application did not publish overutil.php.
+     * not executed. The definitions live in the internal config/logchannel.php
+     * file, which is never published to the application.
      */
     private function registerLoggingChannels(): void
     {
-        $channels = config('overutil.logging.channels', []);
+        $channels = config('logchannel.channels', []);
 
         if (! is_array($channels)) {
             return;

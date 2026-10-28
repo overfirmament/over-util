@@ -111,6 +111,10 @@ PHP);
         $this->assertFileExists($this->configPath.'/overutil.php');
         $this->assertFileExists($this->configPath.'/alarm.php');
         $this->assertFileExists($this->configPath.'/rabbitmq.php');
+        $this->assertFileDoesNotExist($this->configPath.'/logchannel.php');
+
+        $publishedOverutil = require $this->configPath.'/overutil.php';
+        $this->assertArrayNotHasKey('logging', $publishedOverutil);
 
         $config = require $this->configPath.'/logging.php';
 

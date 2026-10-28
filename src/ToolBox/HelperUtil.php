@@ -7,6 +7,7 @@ use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Log;
+use Overfirmament\OverUtils\Support\TraceContext;
 
 class HelperUtil
 {
@@ -616,11 +617,14 @@ class HelperUtil
     }
 
     /**
+     * Resolve the trace id from the configured field and every supported
+     * source (Context, shared log context and the current request).
+     *
      * @return mixed|string
      */
     public static function getContextTraceId(): mixed
     {
-        return Context::get('trace_id') ?: (Log::sharedContext()['trace_id'] ?? '');
+        return TraceContext::resolve();
     }
 
     public static function getContext(string $trace): mixed
