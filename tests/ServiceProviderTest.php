@@ -12,9 +12,8 @@ class ServiceProviderTest extends TestCase
     #[Test]
     public function it_merges_default_config(): void
     {
-        $this->assertIsArray(config('logchannel.channels'));
-        $this->assertArrayHasKey('http_out', config('logchannel.channels'));
-        $this->assertNull(config('overutil.logging'));
+        $this->assertArrayNotHasKey('logging', config('overutil'));
+        $this->assertNull(config('logchannel'));
         $this->assertSame('trace_id', config('overutil.trace.field'));
         $this->assertSame('trace_id', config('overutil.trace.output'));
         $this->assertArrayHasKey('default', config('alarm.qy_wx'));

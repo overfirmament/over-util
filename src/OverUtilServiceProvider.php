@@ -5,10 +5,19 @@ namespace Overfirmament\OverUtils;
 use Illuminate\Support\ServiceProvider;
 use Overfirmament\OverUtils\Console\InstallCommand;
 use Overfirmament\OverUtils\Console\PublishResetCache;
+use Overfirmament\OverUtils\Console\Support\LoggingChannels;
 use Overfirmament\OverUtils\Console\Tool\AutoGenerate;
 use Overfirmament\OverUtils\Console\Tool\MakeRepository;
 use Overfirmament\OverUtils\Console\Tool\MakeService;
+use Overfirmament\OverUtils\Http\Saloon\Middleware\LogSaloonFatal;
+use Overfirmament\OverUtils\Http\Saloon\Middleware\LogSaloonRequest;
+use Overfirmament\OverUtils\Http\Saloon\Middleware\LogSaloonResponse;
+use Overfirmament\OverUtils\Http\Saloon\SaloonLogger;
 use Overfirmament\OverUtils\ToolBox\RabbitMqConnectionManager;
+use Saloon\Config as SaloonConfig;
+use Saloon\Enums\PipeOrder;
+use Saloon\Helpers\Pipeline;
+use Throwable;
 
 class OverUtilServiceProvider extends ServiceProvider
 {
@@ -26,7 +35,6 @@ class OverUtilServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__.'/../config/overutil.php', 'overutil');
-        $this->mergeConfigFrom(__DIR__.'/../config/logchannel.php', 'logchannel');
         $this->mergeConfigFrom(__DIR__.'/../config/alarm.php', 'alarm');
         $this->mergeConfigFrom(__DIR__.'/../config/rabbitmq.php', 'rabbitmq');
 
@@ -52,18 +60,19 @@ class OverUtilServiceProvider extends ServiceProvider
         ], 'over-util-rabbitmq-config');
 
         $this->registerLoggingChannels();
+        $this->registerSaloonLogging();
     }
 
     /**
      * Make the package log channels available even when the install command was
-     * not executed. The definitions live in the internal config/logchannel.php
-     * file, which is never published to the application.
+     * not executed. The definitions live in the internal
+     * src/Console/Stubs/logging-channels.stub template, which is never published.
      */
     private function registerLoggingChannels(): void
     {
-        $channels = config('logchannel.channels', []);
-
-        if (! is_array($channels)) {
+        try {
+            $channels = LoggingChannels::channels();
+        } catch (Throwable) {
             return;
         }
 
@@ -85,5 +94,42 @@ class OverUtilServiceProvider extends ServiceProvider
         return str_starts_with($path, '/')
             || str_starts_with($path, '\\')
             || preg_match('/^[A-Za-z]:[\\\\\\/]/', $path) === 1;
+    }
+
+    /**
+     * Register Saloon's global middleware so every connector is covered without
+     * touching application code. Saloon keeps this pipeline in a static
+     * property, so the pipes are added by name and only once.
+     */
+    private function registerSaloonLogging(): void
+    {
+        if (! SaloonLogger::enabled()) {
+            return;
+        }
+
+        $pipeline = SaloonConfig::globalMiddleware();
+
+        if (! $this->saloonPipeExists($pipeline->getRequestPipeline(), 'overutil.saloon.request')) {
+            $pipeline->onRequest(new LogSaloonRequest, 'overutil.saloon.request', PipeOrder::LAST);
+        }
+
+        if (! $this->saloonPipeExists($pipeline->getResponsePipeline(), 'overutil.saloon.response')) {
+            $pipeline->onResponse(new LogSaloonResponse, 'overutil.saloon.response', PipeOrder::LAST);
+        }
+
+        if (! $this->saloonPipeExists($pipeline->getFatalPipeline(), 'overutil.saloon.fatal')) {
+            $pipeline->onFatalException(new LogSaloonFatal, 'overutil.saloon.fatal', PipeOrder::LAST);
+        }
+    }
+
+    private function saloonPipeExists(Pipeline $pipeline, string $name): bool
+    {
+        foreach ($pipeline->getPipes() as $pipe) {
+            if ($pipe->name === $name) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

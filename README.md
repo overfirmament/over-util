@@ -36,7 +36,7 @@ php artisan overutil:install --dry-run
 
 修改前会在 `config/logging.php` 旁生成 `logging.php.overutil.bak` 备份。向 `AppServiceProvider.php` 注入内容前也会生成 `AppServiceProvider.php.overutil.bak` 备份。
 
-日志 channel 的定义位于包内部的 `config/logchannel.php`，该文件不会发布到应用：安装命令只把它们写入 `config/logging.php`。即使没有执行安装命令，ServiceProvider 也会在运行时补充缺失的 channel。
+日志 channel 的定义位于包内部模板 `src/Console/Stubs/logging-channels.stub`，该文件不会发布到应用：安装命令把其中的 channel 写入 `config/logging.php`，未执行安装命令时 ServiceProvider 也会用同一份模板补充缺失的 channel。
 
 ## Horizon / 常驻 worker
 
@@ -121,6 +121,49 @@ php artisan overutil:install --dry-run
 $formatter = new \Overfirmament\OverUtils\Logger\LogFormatter;
 $formatter->setTrackField('requestId')->setOutputField('request_id');
 ```
+
+## Saloon 请求/响应日志
+
+包内注册了 Saloon 全局中间件，开启后会记录所有 Saloon 出站请求、响应和连接级失败。默认关闭：
+
+```dotenv
+OVERUTIL_SALOON_LOG=true
+```
+
+配置位于 `config/overutil.php`：
+
+```php
+'saloon' => [
+    'logging' => [
+        'enabled' => env('OVERUTIL_SALOON_LOG', false),
+        'channel' => env('OVERUTIL_SALOON_LOG_CHANNEL', 'http_out'),
+        'level' => env('OVERUTIL_SALOON_LOG_LEVEL', 'info'),
+        'log_request' => true,
+        'log_response' => true,
+        'log_fatal' => true,
+        'log_headers' => false,
+        'log_body' => true,
+        'max_body_length' => 2000,
+        'redacted_headers' => ['authorization', 'cookie', 'x-api-key'],
+        'redacted_keys' => ['password', 'token', 'access_token', 'secret'],
+        // 为空表示所有 Connector，支持通配符
+        'connectors' => [],
+        'except_connectors' => [],
+    ],
+    'trace' => [
+        'header' => env('OVERUTIL_SALOON_TRACE_HEADER'), // 如 X-Request-Id
+        'propagate' => env('OVERUTIL_SALOON_PROPAGATE_TRACE', true),
+    ],
+],
+```
+
+行为说明：
+
+- 只影响 Saloon 请求，不影响 Laravel 入站请求或其他 HTTP 客户端。
+- 默认记录请求、响应两条日志；headers 默认关闭，body 自动脱敏并按 `max_body_length` 截断。
+- trace 取值顺序：请求头（`trace.header`）→ `TraceContext::resolve()`。显式请求头优先，便于单个调用指定 trace。
+- `propagate=true` 时，若请求头不存在，会把解析到的 trace 注入下游请求；已存在则不覆盖。
+- 队列 Job 中使用 `Context::add($field, $id)` 后，Laravel 会自动随队列传播；手动执行的 artisan 命令需要自行建立 Context。
 
 ## API 响应
 
