@@ -167,7 +167,11 @@ OVERUTIL_SALOON_LOG=true
 
 ## API 响应
 
-`ApiResponse` trait 支持业务码与 HTTP 状态码分离：
+`ApiResponse` trait 将业务码（`statusCode` / body 里的 `code`）与 HTTP 状态码（`httpCode`）完全隔离：
+
+- 两者默认值都是 `200`。
+- **业务码不会参与 HTTP 状态的判断**，包括 `400`、`500` 这类看起来像 HTTP 码的值。
+- 需要非 200 的 HTTP 状态时，只能显式指定：`setHttpCode()`，或方法的 `$httpCode` 形参。
 
 ```php
 use Overfirmament\OverUtils\Traits\ApiResponse;
@@ -178,14 +182,21 @@ class Controller
 
     public function show()
     {
-        return $this->success(['id' => 1]);       // HTTP 200
-        // return $this->created($data);          // HTTP 201
-        // return $this->deleted();               // HTTP 204
-        // return $this->notFound();              // HTTP 404
-        // return $this->failed('失败', 1001);     // HTTP 400，业务码 1001
+        return $this->success(['id' => 1]);           // HTTP 200，code 200
+        // return $this->created($data);              // HTTP 201
+        // return $this->deleted();                   // HTTP 204
+        // return $this->notFound();                  // HTTP 404，code 404
+        // return $this->failed('失败', 400408);       // HTTP 200，code 400408
+        // return $this->failed('失败', 400408, 'error', 400); // HTTP 400，code 400408
+        // return $this->setHttpCode(400)->failed('失败', 400408); // HTTP 400
+        // return $this->respond(['ok' => true], httpCode: 202);   // HTTP 202
     }
 }
 ```
+
+语义化快捷方法的默认 HTTP 状态是显式写死的，而不是从业务码推导：`notFound()` 404、`error()` 422、`internalError()` 500、`created()` 201、`deleted()` 204；都可以通过第二个（或对应的）`$httpCode` 形参覆盖。
+
+> `ApiResponse` 是有状态的响应构建器：`statusCode`、`httpCode`、`isJsonP` 等都会保留在实例上。一个实例只应产出一个响应；批量场景请为每条结果创建新实例，或使用 `setHttpCode()` / `$httpCode` 形参显式控制。快捷方法不会把 201/204/400 等写回实例的 `httpCode`，只有 `setHttpCode()` 会。
 
 ### JWT / Token 过期时间
 

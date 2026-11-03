@@ -87,12 +87,80 @@ class ApiResponseTest extends TestCase
     }
 
     #[Test]
-    public function non_http_business_codes_do_not_become_the_http_status(): void
+    public function business_codes_never_become_the_http_status(): void
     {
-        $response = (new ApiResponder)->failed('business error', 1001);
+        foreach ([1001, 400408, 400, 500] as $code) {
+            $response = (new ApiResponder)->failed('business error', $code);
+
+            $this->assertSame(200, $response->getStatusCode(), "Business code {$code} leaked into the HTTP status.");
+            $this->assertSame($code, $response->getData(true)['code']);
+        }
+    }
+
+    #[Test]
+    public function status_does_not_derive_the_http_status_from_the_business_code(): void
+    {
+        $response = (new ApiResponder)->status('error', [], 400408);
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame(400408, $response->getData(true)['code']);
+    }
+
+    #[Test]
+    public function failed_accepts_an_explicit_http_status(): void
+    {
+        $response = (new ApiResponder)->failed('business error', 400408, 'error', 400);
 
         $this->assertSame(400, $response->getStatusCode());
-        $this->assertSame(1001, $response->getData(true)['code']);
+        $this->assertSame(400408, $response->getData(true)['code']);
+    }
+
+    #[Test]
+    public function set_http_code_applies_to_failed_responses(): void
+    {
+        $response = (new ApiResponder)->setHttpCode(503)->failed('down', 400408);
+
+        $this->assertSame(503, $response->getStatusCode());
+        $this->assertSame(400408, $response->getData(true)['code']);
+    }
+
+    #[Test]
+    public function respond_and_jsonp_accept_an_explicit_http_status(): void
+    {
+        $respond = (new ApiResponder)->respond(['ok' => true], httpCode: 202);
+        $jsonp = (new ApiResponder)->jsonp(['ok' => true], 'callback', 'success', 202);
+
+        $this->assertSame(202, $respond->getStatusCode());
+        $this->assertSame(202, $jsonp->getStatusCode());
+    }
+
+    #[Test]
+    public function semantic_helpers_keep_their_explicit_http_status(): void
+    {
+        $this->assertSame(422, (new ApiResponder)->error('invalid')->getStatusCode());
+        $this->assertSame(500, (new ApiResponder)->internalError()->getStatusCode());
+        $this->assertSame(404, (new ApiResponder)->notFound()->getStatusCode());
+        $this->assertSame(422, (new ApiResponder)->error('invalid', 400408)->getStatusCode());
+    }
+
+    #[Test]
+    public function shortcut_methods_do_not_leak_the_http_status_to_later_responses(): void
+    {
+        $responder = new ApiResponder;
+
+        $created = $responder->created(['id' => 1]);
+        $success = $responder->success(['id' => 2]);
+        $failed = $responder->failed('error', 400408, 'error', 400);
+        $again = $responder->success(['id' => 3]);
+        $deleted = $responder->deleted();
+        $afterDelete = $responder->success(['id' => 4]);
+
+        $this->assertSame(201, $created->getStatusCode());
+        $this->assertSame(200, $success->getStatusCode());
+        $this->assertSame(400, $failed->getStatusCode());
+        $this->assertSame(200, $again->getStatusCode());
+        $this->assertSame(204, $deleted->getStatusCode());
+        $this->assertSame(200, $afterDelete->getStatusCode());
     }
 
     #[Test]

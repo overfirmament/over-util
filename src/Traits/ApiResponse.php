@@ -82,9 +82,15 @@ trait ApiResponse
     /**
      * @param  mixed  $data
      * @param  array<string, string>  $headers
+     * @param  int|null  $httpCode  overrides the instance HTTP status for this response only
      */
-    public function respond($data, array $headers = ['Content-Type' => 'application/json; charset=utf-8']): JsonResponse
-    {
+    public function respond(
+        $data,
+        array $headers = ['Content-Type' => 'application/json; charset=utf-8'],
+        ?int $httpCode = null
+    ): JsonResponse {
+        $httpCode ??= $this->httpCode;
+
         if (is_array($data)) {
             $traceId = (string) HelperUtil::getContextTraceId();
 
@@ -94,17 +100,17 @@ trait ApiResponse
         }
 
         if ($this->isJsonP) {
-            return response()->jsonp($this->jsonPCallback, $data, $this->httpCode, $headers);
+            return response()->jsonp($this->jsonPCallback, $data, $httpCode, $headers);
         }
 
-        return response()->json($data, $this->httpCode, $headers);
+        return response()->json($data, $httpCode, $headers);
     }
 
     /**
      * @param  mixed  $status
      * @param  array<string, mixed>  $data
      */
-    public function status($status, array $data, ?int $code = null): JsonResponse
+    public function status($status, array $data, ?int $code = null, ?int $httpCode = null): JsonResponse
     {
         if ($code !== null) {
             $this->setStatusCode($code);
@@ -119,25 +125,25 @@ trait ApiResponse
             $dataBag[$this->timeField] = now()->getTimestamp();
         }
 
-        return $this->respond(array_merge($dataBag, $data));
+        return $this->respond(array_merge($dataBag, $data), httpCode: $httpCode);
     }
 
     /**
      * @param  mixed  $message
      */
-    public function message($message, string $status = 'success'): JsonResponse
+    public function message($message, string $status = 'success', ?int $httpCode = null): JsonResponse
     {
         return $this->status($status, [
             $this->messageField => $message,
             'data' => [],
-        ]);
+        ], null, $httpCode);
     }
 
-    /**
-     * @param  array<mixed>|Data|null  $data
-     */
-    public function success(array|Data|null $data = [], string $status = 'success'): JsonResponse
-    {
+    public function success(
+        array|Data|null $data = [],
+        string $status = 'success',
+        ?int $httpCode = null
+    ): JsonResponse {
         if ($data instanceof Data) {
             $data = $data->toArray();
         }
@@ -145,7 +151,7 @@ trait ApiResponse
         return $this->status($status, array_merge(
             ['data' => $data ?? []],
             [$this->messageField => '']
-        ));
+        ), null, $httpCode);
     }
 
     /**
@@ -155,20 +161,25 @@ trait ApiResponse
         string $token,
         string $tokenType = 'Bearer',
         int|DateTimeInterface|DateInterval|null $expiresIn = null,
-        ?string $guard = null
+        ?string $guard = null,
+        ?int $httpCode = null
     ): JsonResponse {
         return $this->status('logged', ['data' => [
             'access_token' => $token,
             'token_type' => $tokenType,
             'expires_in' => TokenExpiration::resolve($expiresIn, $guard),
-        ]]);
+        ]], null, $httpCode);
     }
 
     /**
      * @param  array<mixed>|Data  $data
      */
-    public function jsonp(array|Data $data, string $callback = 'jsonpCallback', string $message = 'success'): JsonResponse
-    {
+    public function jsonp(
+        array|Data $data,
+        string $callback = 'jsonpCallback',
+        string $message = 'success',
+        ?int $httpCode = null
+    ): JsonResponse {
         if ($data instanceof Data) {
             $data = $data->toArray();
         }
@@ -176,36 +187,38 @@ trait ApiResponse
         return $this->useJsonP($callback)->status('success', array_merge(
             $data,
             [$this->messageField => $message]
-        ));
+        ), null, $httpCode);
     }
 
-    /**
-     * @param  array<mixed>|Data  $data
-     */
-    public function listData(array|Data $data): JsonResponse
+    public function listData(array|Data $data, ?int $httpCode = null): JsonResponse
     {
         $data = $data instanceof Data ? $data->toArray() : $data;
 
-        return $this->success(['list' => $data]);
+        return $this->success(['list' => $data], httpCode: $httpCode);
     }
 
     /**
      * @param  mixed  $data
      */
-    public function created($data, string $status = 'created'): JsonResponse
-    {
-        return $this->setHttpCode(FoundationResponse::HTTP_CREATED)
-            ->status($status, compact('data'));
+    public function created(
+        $data,
+        string $status = 'created',
+        ?int $httpCode = FoundationResponse::HTTP_CREATED
+    ): JsonResponse {
+        return $this->status($status, compact('data'), null, $httpCode);
     }
 
-    public function deleted(string $status = 'deleted'): JsonResponse|Response
-    {
-        $this->setHttpCode(FoundationResponse::HTTP_NO_CONTENT);
-
-        return response()->noContent(FoundationResponse::HTTP_NO_CONTENT);
+    public function deleted(
+        string $status = 'deleted',
+        ?int $httpCode = FoundationResponse::HTTP_NO_CONTENT
+    ): JsonResponse|Response {
+        return response()->noContent($httpCode ?? FoundationResponse::HTTP_NO_CONTENT);
     }
 
     /**
+     * The business code is never used to derive the HTTP status. Pass
+     * $httpCode, or call setHttpCode(), when a non-200 HTTP status is needed.
+     *
      * @param  mixed  $message
      */
     public function failed(
@@ -214,31 +227,33 @@ trait ApiResponse
         string $status = 'error',
         ?int $httpCode = null
     ): JsonResponse {
-        $httpCode ??= $code >= 100 && $code <= 599
-            ? $code
-            : FoundationResponse::HTTP_BAD_REQUEST;
-
         return $this->setStatusCode($code)
-            ->setHttpCode($httpCode)
-            ->message($message, $status);
+            ->message($message, $status, $httpCode);
     }
 
-    public function notFond(string $message = 'Not Fond!'): JsonResponse
-    {
-        return $this->failed($message, FoundationResponse::HTTP_NOT_FOUND);
+    public function notFond(
+        string $message = 'Not Fond!',
+        ?int $httpCode = FoundationResponse::HTTP_NOT_FOUND
+    ): JsonResponse {
+        return $this->failed($message, FoundationResponse::HTTP_NOT_FOUND, 'error', $httpCode);
     }
 
-    public function notFound(string $message = 'Not Found!'): JsonResponse
-    {
-        return $this->notFond($message);
+    public function notFound(
+        string $message = 'Not Found!',
+        ?int $httpCode = FoundationResponse::HTTP_NOT_FOUND
+    ): JsonResponse {
+        return $this->notFond($message, $httpCode);
     }
 
-    public function error(string $message = 'error', int $code = FoundationResponse::HTTP_UNPROCESSABLE_ENTITY): JsonResponse
-    {
-        return $this->failed($message, $code);
+    public function error(
+        string $message = 'error',
+        int $code = FoundationResponse::HTTP_UNPROCESSABLE_ENTITY,
+        ?int $httpCode = FoundationResponse::HTTP_UNPROCESSABLE_ENTITY
+    ): JsonResponse {
+        return $this->failed($message, $code, 'error', $httpCode);
     }
 
-    public function errorWithEnum(\BackedEnum $enum): JsonResponse
+    public function errorWithEnum(\BackedEnum $enum, ?int $httpCode = null): JsonResponse
     {
         $message = method_exists($enum, 'message')
             ? (string) $enum->message()
@@ -248,12 +263,14 @@ trait ApiResponse
             ? $enum->value
             : FoundationResponse::HTTP_BAD_REQUEST;
 
-        return $this->error($message, $code);
+        return $this->failed($message, $code, 'error', $httpCode);
     }
 
-    public function internalError(string $message = 'Internal Error!'): JsonResponse
-    {
-        return $this->failed($message, FoundationResponse::HTTP_INTERNAL_SERVER_ERROR);
+    public function internalError(
+        string $message = 'Internal Error!',
+        ?int $httpCode = FoundationResponse::HTTP_INTERNAL_SERVER_ERROR
+    ): JsonResponse {
+        return $this->failed($message, FoundationResponse::HTTP_INTERNAL_SERVER_ERROR, 'error', $httpCode);
     }
 
     /**
