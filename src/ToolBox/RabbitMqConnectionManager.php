@@ -18,6 +18,9 @@ class RabbitMqConnectionManager
     /** @var array<string, AMQPStreamConnection> */
     private array $connections = [];
 
+    /** @var array<string, string> */
+    private array $connectionIds = [];
+
     /**
      * @param  array<string, mixed>  $config
      */
@@ -30,6 +33,8 @@ class RabbitMqConnectionManager
                 $connection->checkHeartBeat();
 
                 if ($connection->isConnected()) {
+                    $this->connectionIds[$name] ??= $this->newConnectionId();
+
                     return $connection;
                 }
             } catch (Throwable) {
@@ -41,8 +46,20 @@ class RabbitMqConnectionManager
 
         $connection = $this->create($config);
         $this->connections[$name] = $connection;
+        $this->connectionIds[$name] ??= $this->newConnectionId();
 
         return $connection;
+    }
+
+    /**
+     * Stable identifier for the cached connection behind the given name.
+     *
+     * The id survives across RabbitMqUtil instances that reuse the same
+     * connection and is regenerated after the connection is closed or replaced.
+     */
+    public function connectionId(string $name): string
+    {
+        return $this->connectionIds[$name] ??= $this->newConnectionId();
     }
 
     /**
@@ -65,11 +82,16 @@ class RabbitMqConnectionManager
 
     public function disconnect(?string $name = null): void
     {
-        $names = $name === null ? array_keys($this->connections) : [$name];
+        $names = $name === null
+            ? array_values(array_unique(array_merge(
+                array_keys($this->connections),
+                array_keys($this->connectionIds)
+            )))
+            : [$name];
 
         foreach ($names as $connectionName) {
             $connection = $this->connections[$connectionName] ?? null;
-            unset($this->connections[$connectionName]);
+            unset($this->connections[$connectionName], $this->connectionIds[$connectionName]);
 
             if (! $connection instanceof AMQPStreamConnection) {
                 continue;
@@ -81,6 +103,11 @@ class RabbitMqConnectionManager
                 // Closing a broken connection must not mask the original error.
             }
         }
+    }
+
+    private function newConnectionId(): string
+    {
+        return str_replace('-', '', (string) \Str::uuid());
     }
 
     /**

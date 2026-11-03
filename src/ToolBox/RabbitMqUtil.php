@@ -30,7 +30,9 @@ class RabbitMqUtil
     /** @var array<string, mixed> */
     protected array $config;
 
-    protected string $uuid;
+    protected string $connectId;
+
+    protected ?string $mqTraceId = null;
 
     protected string $routingKey = '';
 
@@ -58,8 +60,8 @@ class RabbitMqUtil
             throw new Exception("rabbitmq配置{$configName}不存在");
         }
 
-        $this->uuid = str_replace('-', '', (string) \Str::uuid());
-        $this->log('info', "mqTool初始化 {$this->uuid}，使用配置rabbitmq.connections.{$configName}", [
+        $this->connectId = app(RabbitMqConnectionManager::class)->connectionId($configName);
+        $this->log('info', "mqTool初始化 {$this->logIds()}，使用配置rabbitmq.connections.{$configName}", [
             'config' => $this->safeConfig(),
         ]);
     }
@@ -114,7 +116,7 @@ class RabbitMqUtil
             $exchange['ticket'] ?? null
         );
 
-        $this->log('info', "exchange构建完成 {$this->uuid}");
+        $this->log('info', "exchange构建完成 {$this->logIds()}");
 
         return $this;
     }
@@ -143,7 +145,7 @@ class RabbitMqUtil
             $queue['ticket'] ?? null
         );
 
-        $this->log('info', "queue构建完成 {$this->uuid}");
+        $this->log('info', "queue构建完成 {$this->logIds()}");
 
         return $this;
     }
@@ -162,7 +164,7 @@ class RabbitMqUtil
             : (string) ($this->config['routing_key'] ?? '');
 
         $this->channel()->queue_bind($this->queueName, $this->exchangeName, $routingKey);
-        $this->log('info', "bind构建完成 {$this->uuid}");
+        $this->log('info', "bind构建完成 {$this->logIds()}");
 
         return $this;
     }
@@ -176,7 +178,7 @@ class RabbitMqUtil
         $properties = array_merge((array) ($messageConfig['properties'] ?? []), $properties);
 
         $this->msg = new AMQPMessage($string, $properties);
-        $this->log('info', "message构建完成 {$this->uuid}");
+        $this->log('info', "message构建完成 {$this->logIds()}");
 
         return $this;
     }
@@ -198,11 +200,11 @@ class RabbitMqUtil
             if ($this->isAck) {
                 $this->enableConfirmMode($channel);
                 $channel->set_ack_handler(function (AMQPMessage $message): void {
-                    $this->log('info', "msg.ack {$this->uuid} ".$message->body);
+                    $this->log('info', "msg.ack {$this->logIds()} ".$message->body);
                 });
                 $channel->set_nack_handler(function (AMQPMessage $message) use (&$nacked): void {
                     $nacked = true;
-                    $this->log('error', "msg.nack {$this->uuid} ".$message->body);
+                    $this->log('error', "msg.nack {$this->logIds()} ".$message->body);
                 });
             }
 
@@ -227,7 +229,7 @@ class RabbitMqUtil
                 throw new Exception('RabbitMQ 返回 nack，消息未被 broker 确认');
             }
 
-            $this->log('info', "msg.publish {$this->uuid}");
+            $this->log('info', "msg.publish {$this->logIds()}");
         } finally {
             $this->closeChannel();
 
@@ -244,6 +246,16 @@ class RabbitMqUtil
         return $this;
     }
 
+    public function getConnectId(): string
+    {
+        return $this->connectId;
+    }
+
+    public function getMqTraceId(): ?string
+    {
+        return $this->mqTraceId;
+    }
+
     /**
      * Closes the channel only. The underlying connection stays in the manager
      * cache for reuse by the next message.
@@ -251,7 +263,7 @@ class RabbitMqUtil
     public function close(): void
     {
         $this->closeChannel();
-        $this->log('info', "mqTool关闭channel {$this->uuid}");
+        $this->log('info', "mqTool关闭channel {$this->logIds()}");
     }
 
     /**
@@ -261,7 +273,7 @@ class RabbitMqUtil
     {
         $this->closeChannel();
         app(RabbitMqConnectionManager::class)->disconnect($this->configName);
-        $this->log('info', "mqTool关闭connection {$this->uuid}");
+        $this->log('info', "mqTool关闭connection {$this->logIds()}");
     }
 
     /**
@@ -308,6 +320,8 @@ class RabbitMqUtil
 
         $this->channel = app(RabbitMqConnectionManager::class)
             ->channel($this->configName, $this->config);
+        $this->connectId = app(RabbitMqConnectionManager::class)->connectionId($this->configName);
+        $this->mqTraceId = HelperUtil::traceId();
         $this->confirmSelected = false;
 
         return $this->channel;
@@ -334,7 +348,7 @@ class RabbitMqUtil
                 $this->channel->close();
             }
         } catch (Throwable $e) {
-            $this->log('warning', "mqTool关闭channel失败 {$this->uuid}", [
+            $this->log('warning', "mqTool关闭channel失败 {$this->logIds()}", [
                 'error' => $e->getMessage(),
             ]);
         } finally {
@@ -344,10 +358,32 @@ class RabbitMqUtil
     }
 
     /**
+     * Human readable ids used in the log message text.
+     */
+    private function logIds(): string
+    {
+        $ids = "connect_id={$this->connectId}";
+
+        if ($this->mqTraceId !== null && $this->mqTraceId !== '') {
+            $ids .= " mq_trace_id={$this->mqTraceId}";
+        }
+
+        return $ids;
+    }
+
+    /**
      * @param  array<string, mixed>  $context
      */
     private function log(string $level, string $message, array $context = []): void
     {
+        $ids = ['connect_id' => $this->connectId];
+
+        if ($this->mqTraceId !== null && $this->mqTraceId !== '') {
+            $ids['mq_trace_id'] = $this->mqTraceId;
+        }
+
+        $context = array_merge($context, $ids);
+
         try {
             Log::channel('rabbit_mq')->log($level, $message, $context);
         } catch (Throwable) {

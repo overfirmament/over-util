@@ -241,6 +241,30 @@ foreach ($messages as $message) {
 
 `getInstance()` 每次返回新的轻量对象，底层 `AMQPStreamConnection` 由 `RabbitMqConnectionManager` 按连接名缓存复用。`publish()` 只关闭当前 channel，不会关闭共享连接，因此可以在外部 `foreach` 中安全使用。
 
+`rabbit_mq` 日志使用两个 ID 关联一次发送：
+
+- `connect_id`：连接级 ID。同一个缓存连接复用期间保持不变，包括多个 `RabbitMqUtil` 实例共用连接；断开或重连后更换。
+- `mq_trace_id`：channel 级 ID。每次创建新 channel 时生成，`publish()` 结束会关闭 channel，所以每次发送都有独立的值。
+
+```text
+mqTool初始化 connect_id=8f3a... 使用配置rabbitmq.connections.default
+exchange构建完成 connect_id=8f3a... mq_trace_id=1c9b...
+message构建完成 connect_id=8f3a... mq_trace_id=1c9b...
+msg.publish connect_id=8f3a... mq_trace_id=1c9b...
+msg.ack connect_id=8f3a... mq_trace_id=1c9b...
+```
+
+同时会写入日志 context：
+
+```json
+{
+    "connect_id": "8f3a...",
+    "mq_trace_id": "1c9b..."
+}
+```
+
+`mq_trace_id` 不会被 `LogFormatter` 提升为顶层 `trace_id`，不影响请求级链路追踪。也可以通过 `getConnectId()` / `getMqTraceId()` 在业务代码中读取。
+
 需要主动释放连接时：
 
 ```php
