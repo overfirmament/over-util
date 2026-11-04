@@ -4,6 +4,8 @@ namespace Overfirmament\OverUtils\ToolBox;
 
 use Illuminate\Redis\Connections\Connection;
 use Illuminate\Redis\Connections\PhpRedisClusterConnection;
+use Illuminate\Redis\Connections\PredisClusterConnection;
+use Illuminate\Redis\Connections\PredisConnection;
 use Illuminate\Support\Facades\Redis;
 
 /**
@@ -137,7 +139,9 @@ class RedisUtil extends Redis
     public function scan(int $cursor = 0, string $pattern = '*', int $count = 1000): array|false
     {
         $client = $this->redis->client();
+        $options = ['match' => $pattern, 'count' => $count];
 
+        // phpredis passes the cursor by reference and takes positional arguments.
         if ($client instanceof \Redis) {
             $keys = $client->scan($cursor, $pattern, $count);
 
@@ -145,30 +149,70 @@ class RedisUtil extends Redis
                 return false;
             }
 
-            return [$cursor, $keys];
+            return [(int) $cursor, $keys];
         }
 
-        // Laravel's cluster connection implements scan() with an options array.
+        // Laravel's phpredis cluster connection implements scan() with an options array.
         if ($this->redis instanceof PhpRedisClusterConnection) {
-            return $this->redis->scan($cursor, [
-                'match' => $pattern,
-                'count' => $count,
-            ]);
+            return $this->redis->scan($cursor, $options);
         }
 
-        // Predis accepts an options array. Use a dynamic call because the
-        // abstract connection only exposes the phpredis mixin signature.
-        if (is_object($client) && method_exists($client, 'scan')) {
-            $scan = \Closure::fromCallable([$client, 'scan']);
-            $result = $scan($cursor, [
-                'match' => $pattern,
-                'count' => $count,
-            ]);
+        // A Predis cluster has no global cursor: scan every node completely on
+        // the first call and return the aggregated batch.
+        if ($this->redis instanceof PredisClusterConnection) {
+            if ($cursor !== 0 || ! is_iterable($client)) {
+                return false;
+            }
 
-            return is_array($result) ? $result : false;
+            $keys = [];
+
+            foreach ($client as $node) {
+                if (! is_callable([$node, 'scan'])) {
+                    continue;
+                }
+
+                $scan = \Closure::fromCallable([$node, 'scan']);
+                $nodeCursor = 0;
+
+                do {
+                    $result = $scan($nodeCursor, $options);
+
+                    if (! $this->isScanResult($result)) {
+                        break;
+                    }
+
+                    $nodeCursor = (int) $result[0];
+                    $keys = array_merge($keys, $result[1]);
+                } while ($nodeCursor !== 0);
+            }
+
+            return [0, $keys];
+        }
+
+        // Predis dispatches commands through __call(), so scan() is not a real
+        // method and method_exists() returns false for it.
+        if ($this->redis instanceof PredisConnection && is_callable([$client, 'scan'])) {
+            $scan = \Closure::fromCallable([$client, 'scan']);
+            $result = $scan($cursor, $options);
+
+            if (! $this->isScanResult($result)) {
+                return false;
+            }
+
+            return [(int) $result[0], array_values($result[1])];
         }
 
         return false;
+    }
+
+    /**
+     * @phpstan-assert-if-true array{0: int|string, 1: array<int, string>} $result
+     */
+    private function isScanResult(mixed $result): bool
+    {
+        return is_array($result)
+            && isset($result[0], $result[1])
+            && is_array($result[1]);
     }
 
     public function del($key): int
