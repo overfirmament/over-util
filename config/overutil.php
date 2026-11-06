@@ -17,6 +17,18 @@ return [
     ],
 
     /*
+     * Unified response (ApiResponse trait) configuration.
+     *
+     * `message_field` is the JSON key carrying the prompt/error message.
+     * Legacy APIs often use `messages`; set
+     * OVERUTIL_RESPONSE_MESSAGE_FIELD=messages to switch every response
+     * without touching any class.
+     */
+    'response' => [
+        'message_field' => env('OVERUTIL_RESPONSE_MESSAGE_FIELD', 'message'),
+    ],
+
+    /*
      * Saloon request/response logging (global middleware).
      *
      * Disabled by default. When enabled it applies to every Saloon connector in

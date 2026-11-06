@@ -198,6 +198,40 @@ class Controller
 
 > `ApiResponse` 是有状态的响应构建器：`statusCode`、`httpCode`、`isJsonP` 等都会保留在实例上。一个实例只应产出一个响应；批量场景请为每条结果创建新实例，或使用 `setHttpCode()` / `$httpCode` 形参显式控制。快捷方法不会把 201/204/400 等写回实例的 `httpCode`，只有 `setHttpCode()` 会。
 
+### 统一响应字段名
+
+`ApiResponse` 默认使用 `message` 作为提示字段，旧系统通常使用 `messages`。
+在 `.env` 中设置即可全局切换，无需修改任何类：
+
+```dotenv
+OVERUTIL_RESPONSE_MESSAGE_FIELD=messages
+```
+
+也可以发布配置后修改 `config/overutil.php`：
+
+```php
+'response' => [
+    'message_field' => 'messages',
+],
+```
+
+> 修改 `.env` 后，如果项目启用了 `php artisan config:cache`，需要执行 `php artisan config:clear` 才会生效。
+
+个别接口仍可单次覆盖：
+
+```php
+return $this->messageField('msg')->message('...');
+```
+
+如果项目不使用配置文件，也可以在基类覆写默认值：
+
+```php
+protected function defaultMessageField(): string
+{
+    return 'messages';
+}
+```
+
 ### JWT / Token 过期时间
 
 `respondWithToken()` 的第三个参数支持秒数、`DateTimeInterface`、`DateInterval`。不传时会自动尝试解析当前 guard 的过期时间：

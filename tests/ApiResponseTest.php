@@ -172,9 +172,91 @@ class ApiResponseTest extends TestCase
         $this->assertSame('token', $data['data']['access_token']);
         $this->assertSame(3600, $data['data']['expires_in']);
     }
+
+    #[Test]
+    public function it_uses_message_by_default(): void
+    {
+        $data = (new ApiResponder)->success(['id' => 1])->getData(true);
+
+        $this->assertArrayHasKey('message', $data);
+        $this->assertArrayNotHasKey('messages', $data);
+    }
+
+    #[Test]
+    public function it_reads_the_message_field_from_config(): void
+    {
+        config()->set('overutil.response.message_field', 'messages');
+
+        $data = (new ApiResponder)->success(['id' => 1])->getData(true);
+
+        $this->assertArrayHasKey('messages', $data);
+        $this->assertArrayNotHasKey('message', $data);
+    }
+
+    #[Test]
+    public function message_and_jsonp_use_the_configured_field(): void
+    {
+        config()->set('overutil.response.message_field', 'messages');
+
+        $this->assertArrayHasKey('messages', (new ApiResponder)->message('ok')->getData(true));
+        $this->assertArrayHasKey('messages', (new ApiResponder)->failed('bad', 400001)->getData(true));
+        $this->assertArrayHasKey('messages', (new ApiResponder)->jsonp(['id' => 1], 'cb', 'ok')->getData(true));
+    }
+
+    #[Test]
+    public function a_per_response_override_wins_over_config(): void
+    {
+        config()->set('overutil.response.message_field', 'messages');
+
+        $data = (new ApiResponder)->messageField('msg')->message('ok')->getData(true);
+
+        $this->assertArrayHasKey('msg', $data);
+        $this->assertArrayNotHasKey('messages', $data);
+    }
+
+    #[Test]
+    public function message_field_without_arguments_restores_the_project_default(): void
+    {
+        config()->set('overutil.response.message_field', 'messages');
+
+        $responder = new ApiResponder;
+        $responder->messageField('msg');
+
+        $data = $responder->messageField()->message('ok')->getData(true);
+
+        $this->assertArrayHasKey('messages', $data);
+    }
+
+    #[Test]
+    public function a_class_may_override_the_default_message_field(): void
+    {
+        $data = (new LegacyApiResponder)->success(['id' => 1])->getData(true);
+
+        $this->assertArrayHasKey('messages', $data);
+    }
+
+    #[Test]
+    public function an_empty_config_value_falls_back_to_message(): void
+    {
+        config()->set('overutil.response.message_field', '');
+
+        $data = (new ApiResponder)->success(['id' => 1])->getData(true);
+
+        $this->assertArrayHasKey('message', $data);
+    }
 }
 
 class ApiResponder
 {
     use ApiResponse;
+}
+
+class LegacyApiResponder
+{
+    use ApiResponse;
+
+    protected function defaultMessageField(): string
+    {
+        return 'messages';
+    }
 }

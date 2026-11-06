@@ -18,7 +18,10 @@ trait ApiResponse
 
     protected int $httpCode = FoundationResponse::HTTP_OK;
 
-    protected string $messageField = 'message';
+    /**
+     * 单次响应级别的字段名覆盖；null 表示使用 defaultMessageField()。
+     */
+    protected ?string $messageField = null;
 
     protected bool $useTime = true;
 
@@ -36,7 +39,36 @@ trait ApiResponse
         return $this;
     }
 
-    public function messageField(string $field = 'message'): static
+    /**
+     * 项目级默认提示字段名。
+     *
+     * 默认读取 overutil.response.message_field，使用方无需修改代码；
+     * 也可以在基类中覆写本方法：
+     *
+     *     protected function defaultMessageField(): string
+     *     {
+     *         return 'messages';
+     *     }
+     */
+    protected function defaultMessageField(): string
+    {
+        $field = config('overutil.response.message_field', 'message');
+
+        return is_string($field) && $field !== '' ? $field : 'message';
+    }
+
+    /**
+     * 当前生效的提示字段名。
+     */
+    protected function messageFieldName(): string
+    {
+        return $this->messageField ?? $this->defaultMessageField();
+    }
+
+    /**
+     * 单次响应覆盖字段名；不传参表示恢复项目默认值。
+     */
+    public function messageField(?string $field = null): static
     {
         $this->messageField = $field;
 
@@ -134,7 +166,7 @@ trait ApiResponse
     public function message($message, string $status = 'success', ?int $httpCode = null): JsonResponse
     {
         return $this->status($status, [
-            $this->messageField => $message,
+            $this->messageFieldName() => $message,
             'data' => [],
         ], null, $httpCode);
     }
@@ -150,7 +182,7 @@ trait ApiResponse
 
         return $this->status($status, array_merge(
             ['data' => $data ?? []],
-            [$this->messageField => '']
+            [$this->messageFieldName() => '']
         ), null, $httpCode);
     }
 
@@ -186,7 +218,7 @@ trait ApiResponse
 
         return $this->useJsonP($callback)->status('success', array_merge(
             $data,
-            [$this->messageField => $message]
+            [$this->messageFieldName() => $message]
         ), null, $httpCode);
     }
 
