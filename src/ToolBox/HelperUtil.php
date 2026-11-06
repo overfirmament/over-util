@@ -140,7 +140,7 @@ class HelperUtil
     /**
      * @return float|int|mixed|string
      */
-    public static function redisGzinflate($value, bool $allowClasses = false): mixed
+    public static function redisGzinflate($value, bool|array $allowClasses = true): mixed
     {
         // 1. 过滤无效输入
         if (! $value || is_numeric($value) || ! is_string($value)) {
@@ -546,16 +546,8 @@ class HelperUtil
         return mktime($hour, $min, $sec, $month, $day, $year);
     }
 
-    public static function unserialize(?string $string, bool $allowClasses = false): mixed
-    {
-        if (empty($string)) {
-            return null;
-        }
 
-        return self::autoUnserialize($string, $allowClasses);
-    }
-
-    public static function autoUnserialize($string, bool $allowClasses = false): mixed
+    public static function autoUnserialize(?string $string, bool|array $allowClasses = true): mixed
     {
         if (! is_string($string) || $string === '') {
             return null;
