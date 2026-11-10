@@ -34,9 +34,9 @@ class HelperUtil
     }
 
     /**
-     * @deprecated
+     * 递归转换数组或字符串的字符集，常用于 GBK 论坛数据。
      *
-     * @return array|false|mixed|string|string[]|null
+     * @param  mixed  $str
      */
     public static function arrayIconv($str, string $inCharset = 'gbk', string $outCharset = 'utf-8'): mixed
     {
@@ -545,7 +545,6 @@ class HelperUtil
 
         return mktime($hour, $min, $sec, $month, $day, $year);
     }
-
 
     public static function autoUnserialize(?string $string, bool|array $allowClasses = true): mixed
     {
