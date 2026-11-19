@@ -4,9 +4,9 @@
 
 ## 环境要求
 
-- PHP 8.2 - 8.5
-- Laravel 12 或 13（PHP 8.2 使用 Laravel 12；Laravel 13 需要 PHP 8.3+）
-- PHP 扩展：`dom`、`iconv`、`json`、`mbstring`、`sockets`、`zlib`
+- PHP 8.5+
+- Laravel 13.32+（由 `orchestra/testbench ^11.3` 的实际下限决定）
+- PHP 扩展：`dom`、`iconv`、`mbstring`、`sockets`、`zlib`
 
 ## 安装
 
@@ -350,7 +350,6 @@ php artisan publish:cache          # 兼容旧名称
 
 ```bash
 composer test          # PHPUnit
-composer analyse       # PHPStan + Larastan
+composer analyse       # PHPStan + Larastan（level 6）
 composer format:test   # Pint 检查
-vendor/bin/phpcs       # PHPCompatibility 检查
 ```
