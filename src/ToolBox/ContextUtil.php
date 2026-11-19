@@ -10,6 +10,8 @@ use Illuminate\Support\HigherOrderTapProxy;
  * 该工具类仅用于上下文注入
  *
  *
+ * @extends Fluent<string, mixed>
+ *
  * @phpstan-consistent-constructor
  */
 class ContextUtil extends Fluent
@@ -34,8 +36,11 @@ class ContextUtil extends Fluent
     }
 
     /**
+     * @param  array<string, mixed>|string  $key
+     * @param  mixed  $value
      * @return $this
      */
+    #[\Override]
     public function set($key, $value = null): static
     {
         $data = is_array($key) ? $key : [$key => $value];
@@ -48,14 +53,18 @@ class ContextUtil extends Fluent
     }
 
     /**
+     * @param  string  $key
+     * @param  mixed  $default
      * @return array|\ArrayAccess|mixed
      */
+    #[\Override]
     public function get($key, $default = null): mixed
     {
         return Arr::get($this->attributes, $key, $default);
     }
 
     /**
+     * @param  string  $key
      * @return array|\ArrayAccess|HigherOrderTapProxy|mixed|null
      */
     public function remember($key, \Closure $callback): mixed
@@ -69,12 +78,20 @@ class ContextUtil extends Fluent
         });
     }
 
+    /**
+     * @param  string  $key
+     * @param  mixed  $default
+     * @return array<array-key, mixed>
+     */
     public function getArray($key, $default = null): array
     {
         return HelperUtil::array($this->get($key, $default), false);
     }
 
     /**
+     * @param  string  $key
+     * @param  mixed  $value
+     * @param  array-key|null  $k
      * @return $this|ContextUtil
      */
     public function add($key, $value, $k = null): ContextUtil|static
@@ -91,6 +108,8 @@ class ContextUtil extends Fluent
     }
 
     /**
+     * @param  string  $key
+     * @param  array<array-key, mixed>  $value
      * @return $this|ContextUtil
      */
     public function merge($key, array $value): ContextUtil|static
@@ -100,6 +119,9 @@ class ContextUtil extends Fluent
         return $this->set($key, array_merge($results, $value));
     }
 
+    /**
+     * @param  array<int, string>|string  $keys
+     */
     public function forget($keys): void
     {
         Arr::forget($this->attributes, $keys);

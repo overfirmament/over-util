@@ -8,6 +8,7 @@ use Saloon\Http\PendingRequest;
 
 final class LogSaloonRequest implements RequestMiddleware
 {
+    #[\Override]
     public function __invoke(PendingRequest $pendingRequest): void
     {
         if (! SaloonLogger::enabled()) {

@@ -55,19 +55,15 @@ class HelperUtil
         }
     }
 
-    public static function isJson($string): bool
+    public static function isJson(mixed $string): bool
     {
-        if (is_string($string)) {
-            json_decode($string);
-
-            return json_last_error() == JSON_ERROR_NONE;
-        }
-
-        return false;
+        return is_string($string) && json_validate($string);
     }
 
     /**
      * 数据中含有中文和"\" 用这个会更友好
+     *
+     * @param  array<array-key, mixed>  $data
      */
     public static function autoJsonEncode(array $data): string
     {
@@ -84,6 +80,9 @@ class HelperUtil
         }
     }
 
+    /**
+     * @return array<array-key, mixed>
+     */
     public static function autoJsonDecode(?string $json, bool $forceArray = true): array
     {
         if (! $json && $forceArray) {
@@ -93,6 +92,9 @@ class HelperUtil
         return (array) json_decode($json, $forceArray);
     }
 
+    /**
+     * @param  mixed  $mobile
+     */
     public static function mobileHide($mobile): string
     {
         return substr_replace($mobile, '****', 3, 4);
@@ -120,6 +122,11 @@ class HelperUtil
         return str_replace('-', $slug, $uuid);
     }
 
+    /**
+     * @param  mixed  $page
+     * @param  mixed  $pageSize
+     * @return array{0: int, 1: int, 2: int}
+     */
     public static function getPageInfo($page, $pageSize, int $max_page = 500, int $maxPageSize = 50): array
     {
         // 设置初始页和最大页数
@@ -138,6 +145,8 @@ class HelperUtil
     }
 
     /**
+     * @param  mixed  $value
+     * @param  bool|array<int, class-string>  $allowClasses
      * @return float|int|mixed|string
      */
     public static function redisGzinflate($value, bool|array $allowClasses = true): mixed
@@ -175,6 +184,9 @@ class HelperUtil
      * 主要用于discuzx项目的redis数据存入前加密
      * \memory_driver_redis::redis_gzinflate
      */
+    /**
+     * @param  mixed  $value
+     */
     public static function redisGzdeflate($value): string
     {
         $serialize = serialize($value);
@@ -206,6 +218,9 @@ class HelperUtil
 
     /**
      * 将数组或 collection 中的字符串数字转成 int或float
+     *
+     * @param  array<array-key, mixed>|Collection<array-key, mixed>  $data
+     * @return array<array-key, mixed>|Collection<array-key, mixed>
      */
     public static function arrayString2Number(array|Collection $data): array|Collection
     {
@@ -304,6 +319,9 @@ class HelperUtil
 
     /**
      * 数组内的key转为驼峰
+     *
+     * @param  array<array-key, mixed>  $data
+     * @return array<string, mixed>
      */
     public static function camelCase(array $data): array
     {
@@ -320,7 +338,7 @@ class HelperUtil
     }
 
     /**
-     * @return array|false|int|string|null
+     * @return array<string, mixed>|false|int|string|null
      */
     public static function urlPath(string $url): bool|array|int|string|null
     {
@@ -343,6 +361,9 @@ class HelperUtil
 
     /**
      * 把给定的值转化为数组.
+     *
+     * @param  mixed  $value
+     * @return array<array-key, mixed>
      */
     public static function array($value, bool $filter = true): array
     {
@@ -372,6 +393,10 @@ class HelperUtil
         }) : $value;
     }
 
+    /**
+     * @param  mixed  $data
+     * @return mixed
+     */
     public static function convertEmptyArrayToObject($data)
     {
         if (is_array($data)) {
@@ -430,6 +455,9 @@ class HelperUtil
 
     /**
      * 内容截取
+     *
+     * @param  mixed  $string
+     * @param  mixed  $length
      */
     public static function cutstr($string, $length, string $dot = ' ...', string $charset = 'utf-8'): string
     {
@@ -514,6 +542,9 @@ class HelperUtil
         return $strcut.$dot;
     }
 
+    /**
+     * @param  mixed  $datestr
+     */
     public static function human2Unix($datestr): false|int
     {
         if ($datestr === '') {
@@ -546,6 +577,9 @@ class HelperUtil
         return mktime($hour, $min, $sec, $month, $day, $year);
     }
 
+    /**
+     * @param  bool|array<int, class-string>  $allowClasses
+     */
     public static function autoUnserialize(?string $string, bool|array $allowClasses = true): mixed
     {
         if (! is_string($string) || $string === '') {
@@ -563,6 +597,8 @@ class HelperUtil
 
     /**
      * 判断当前用户名是否可以进行修改
+     *
+     * @param  mixed  $username
      */
     public static function originNameCheck($username): bool
     {
@@ -577,6 +613,8 @@ class HelperUtil
 
     /**
      * 判断是否是序列化数据
+     *
+     * @param  mixed  $data
      */
     public static function isSerialize($data): bool
     {

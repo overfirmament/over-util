@@ -32,6 +32,7 @@ class OverUtilServiceProvider extends ServiceProvider
         MakeRepository::class,
     ];
 
+    #[\Override]
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__.'/../config/overutil.php', 'overutil');

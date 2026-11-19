@@ -4,6 +4,9 @@ namespace Overfirmament\OverUtils\Traits;
 
 trait EnumHandleTrait
 {
+    /**
+     * @return array<int, int|string>
+     */
     public static function values(): array
     {
         $data = [];
@@ -26,6 +29,9 @@ trait EnumHandleTrait
         return $this->value === $value;
     }
 
+    /**
+     * @param  int|string  $value
+     */
     public static function isBelong($value): bool
     {
         return (bool) self::tryFrom($value);

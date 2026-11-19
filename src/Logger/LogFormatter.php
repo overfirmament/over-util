@@ -47,6 +47,7 @@ class LogFormatter extends JsonFormatter
         return $this;
     }
 
+    #[\Override]
     public function format(LogRecord $record): string
     {
         $record = $this->normalizeRecord($record);

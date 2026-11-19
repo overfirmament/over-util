@@ -8,6 +8,7 @@ use Saloon\Http\Response;
 
 final class LogSaloonResponse implements ResponseMiddleware
 {
+    #[\Override]
     public function __invoke(Response $response): void
     {
         if (! SaloonLogger::enabled() || ! SaloonLogger::logResponseEnabled()) {

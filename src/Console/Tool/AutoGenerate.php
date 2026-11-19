@@ -23,6 +23,8 @@ class AutoGenerate extends Command
 
     /**
      * Execute the console command.
+     *
+     * @return int
      */
     public function handle()
     {
@@ -44,5 +46,7 @@ class AutoGenerate extends Command
                 'name' => $service.'Service',
             ]);
         }
+
+        return self::SUCCESS;
     }
 }

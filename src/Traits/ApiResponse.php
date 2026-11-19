@@ -31,6 +31,9 @@ trait ApiResponse
 
     protected string $jsonPCallback = 'jsonpCallback';
 
+    /**
+     * @deprecated JSONP is legacy; prefer json()/success().
+     */
     public function useJsonP(string $callback = 'jsonpCallback'): static
     {
         $this->isJsonP = true;
@@ -171,6 +174,9 @@ trait ApiResponse
         ], null, $httpCode);
     }
 
+    /**
+     * @param  array<mixed>|Data|null  $data
+     */
     public function success(
         array|Data|null $data = [],
         string $status = 'success',
@@ -204,6 +210,8 @@ trait ApiResponse
     }
 
     /**
+     * @deprecated JSONP is legacy; prefer json()/success().
+     *
      * @param  array<mixed>|Data  $data
      */
     public function jsonp(
@@ -222,6 +230,9 @@ trait ApiResponse
         ), null, $httpCode);
     }
 
+    /**
+     * @param  array<mixed>|Data  $data
+     */
     public function listData(array|Data $data, ?int $httpCode = null): JsonResponse
     {
         $data = $data instanceof Data ? $data->toArray() : $data;

@@ -27,6 +27,7 @@ class MakeRepository extends GeneratorCommand
      *
      * @return string
      */
+    #[\Override]
     protected function getStub()
     {
         return dirname(__DIR__).'/Stubs/class.stub';
@@ -38,6 +39,7 @@ class MakeRepository extends GeneratorCommand
      * @param  string  $rootNamespace
      * @return string
      */
+    #[\Override]
     protected function getDefaultNamespace($rootNamespace)
     {
         return $rootNamespace.'\Repositories';

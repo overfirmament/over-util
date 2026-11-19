@@ -2,7 +2,8 @@ includes:
     - vendor/larastan/larastan/extension.neon
 
 parameters:
-    level: 5
+    level: 6
+    phpVersion: 80500
     paths:
         - src
         - tests/Fixtures

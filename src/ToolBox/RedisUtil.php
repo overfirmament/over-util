@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Redis;
  * @method incr(string $key)
  * @method setEx(string $key, int $ttl, mixed $value)
  * @method zAdd(string $key, ...$scoreAndMember)
- * @method array zRangeByScore(string $key, int $min, int $max, array $options = [])
+ * @method array<int, string> zRangeByScore(string $key, int $min, int $max, array<string, mixed> $options = [])
  * @method zRangeByScoreWithScores(string $key, int $min, int $max)
  * @method zRange(string $key, int $start, int $stop)
  * @method zRangeWithScores(string $key, int $start, int $stop)
@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\Redis;
  * @method zRemRangeByRank(string $key, $start, $end)
  * @method zCard(string $key)
  * @method pipeline(callable $callback = null)
- * @method mGet(array $key)
+ * @method array<int, string|null> mGet(array<int, string> $key)
  * @method mSet(...$key)
  * @method publish(string $key, string $value)
  * @method expire(string $key, int $seconds)
@@ -34,18 +34,18 @@ use Illuminate\Support\Facades\Redis;
  * @method hSet(string $key, string $field, string $value)
  * @method hMGet(string $key, ...$fields)
  * @method hMSet(string $key, ...$fieldAndValue)
- * @method array hGetAll(string $key)
+ * @method array<string, mixed> hGetAll(string $key)
  * @method hKeys(string $key)
  * @method hVals(string $key)
  * @method sAdd(string $key, ...$members)
- * @method array sMembers(string $key)
+ * @method array<int, string> sMembers(string $key)
  * @method incrBy(string $key, int $value)
  * @method zScore(string $key, string $member)
  * @method zIncrBy(string $key, int $increment, string $member)
  * @method zRem(string $key, ...$members)
- * @method zRevRangeByScore(string $key, string $max, string $min, array $options = [])
+ * @method zRevRangeByScore(string $key, string $max, string $min, array<string, mixed> $options = [])
  * @method zRevRangeByScoreWithScores(string $key, string $max, string $min)
- * @method zRevRange(string $key, int $start, int $end, array $options = [])
+ * @method zRevRange(string $key, int $start, int $end, array<string, mixed> $options = [])
  * @method zCount(string $key, string $min, string $max)
  * @method bool sisMember(string $key, string $member)
  * @method int hIncrBy(string $key, string $field, int $increment)
@@ -59,6 +59,7 @@ use Illuminate\Support\Facades\Redis;
  */
 class RedisUtil extends Redis
 {
+    /** @var array<string, static> */
     protected static $instances = [];
 
     protected Connection $redis;
@@ -85,6 +86,8 @@ class RedisUtil extends Redis
 
     /**
      * 返回所有连接实例
+     *
+     * @return array<string, static>
      */
     public static function getInstances(): array
     {
@@ -93,6 +96,9 @@ class RedisUtil extends Redis
 
     /**
      * 返回具体的key值
+     *
+     * @param  string  ...$patternKeys
+     * @return array<int, string>
      */
     public function patternKeys(...$patternKeys): array
     {
@@ -215,6 +221,9 @@ class RedisUtil extends Redis
             && is_array($result[1]);
     }
 
+    /**
+     * @param  string|array<int, string>  $key
+     */
     public function del($key): int
     {
         if (filled($key)) {
@@ -224,6 +233,11 @@ class RedisUtil extends Redis
         return 0;
     }
 
+    /**
+     * @param  string  $name
+     * @param  array<int, mixed>  $arguments
+     * @return mixed
+     */
     public function __call($name, $arguments)
     {
         if (\Str::endsWith($name, 'WithScores')) {

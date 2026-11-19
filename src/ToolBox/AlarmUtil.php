@@ -124,6 +124,8 @@ class AlarmUtil
     }
 
     /**
+     * @param  array<string, mixed>  $body
+     *
      * @throws GuzzleException
      */
     protected function send(array $body): ResponseInterface
@@ -167,6 +169,10 @@ class AlarmUtil
     }
 
     /**
+     * @param  string  $title
+     * @param  array<array-key, mixed>|string  $content
+     * @param  array<int, string>  $atMobiles
+     *
      * @throws GuzzleException
      */
     public function text($title, $content, array $atMobiles = [], bool $isAtAll = false): ResponseInterface|bool
@@ -205,6 +211,9 @@ class AlarmUtil
     }
 
     /**
+     * @param  string  $title
+     * @param  array<string, mixed>  $content
+     *
      * @throws GuzzleException
      */
     public function markdown($title, array $content): ResponseInterface|bool

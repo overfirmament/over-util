@@ -210,6 +210,7 @@ final class SaloonLogger
 
     /**
      * @param  array<string, mixed>  $context
+     * @param  array<string, mixed>  $headers
      * @return array<string, mixed>
      */
     private static function withOptionalData(array $context, array $headers, mixed $body): array

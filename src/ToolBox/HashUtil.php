@@ -7,6 +7,10 @@ namespace Overfirmament\OverUtils\ToolBox;
  */
 class HashUtil
 {
+    /**
+     * @param  string  $key
+     * @param  int  $seed
+     */
     public static function hash($key, $seed = 305441741): int|string
     {
         $m = -4132994306676758123;
@@ -54,6 +58,10 @@ class HashUtil
         return $h;
     }
 
+    /**
+     * @param  string  $str
+     * @return array<int, int>
+     */
     private static function getBytes($str): array
     {
         $len = strlen($str);
@@ -65,6 +73,10 @@ class HashUtil
         return $bytes;
     }
 
+    /**
+     * @param  int  $x
+     * @param  int  $y
+     */
     private static function multi64($x, $y): int
     {
         $result = 0;
@@ -78,7 +90,11 @@ class HashUtil
         return $result;
     }
 
-    private static function rShift($num, $bit)
+    /**
+     * @param  int  $num
+     * @param  int  $bit
+     */
+    private static function rShift($num, $bit): int
     {
         if ($bit <= 0) {
             return $num;
@@ -93,6 +109,10 @@ class HashUtil
         }
     }
 
+    /**
+     * @param  int  $x
+     * @param  int  $y
+     */
     private static function add64($x, $y): int
     {
         $jw = $x & $y;
@@ -107,6 +127,9 @@ class HashUtil
         return $jg;
     }
 
+    /**
+     * @param  int|string  $primaryKey
+     */
     public static function tableSuffix($primaryKey): float|int
     {
         return abs(self::hash((string) $primaryKey) % 10);

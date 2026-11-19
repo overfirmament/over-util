@@ -4,6 +4,9 @@ namespace Overfirmament\OverUtils\Traits;
 
 trait EnumDescriptionTrait
 {
+    /**
+     * @return array<int|string, mixed>
+     */
     public static function asSelectArray(): array
     {
         $data = [];
